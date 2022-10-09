@@ -1,5 +1,4 @@
-use actix_web::{put, web, HttpResponse, Responder};
-//use actix_web::{get, put, web, HttpResponse, Responder};
+use actix_web::{get, put, web, HttpResponse, Responder};
 use rgb_lib::keys::generate_keys;
 use serde::Deserialize;
 use serde::Serialize;
@@ -14,10 +13,10 @@ struct KeyGenResult {
     xpub_fingerprint: String,
 }
 
-//#[get("/keys")]
-//pub async fn get() -> impl Responder {
-//    ""
-//}
+#[get("/keys")]
+pub async fn get() -> impl Responder {
+    ""
+}
 
 #[put("/keys")]
 pub async fn put(_params: web::Json<KeyGenParams>) -> impl Responder {
@@ -45,14 +44,14 @@ mod tests {
     };
 
     #[actix_web::test]
-    async fn get() {
-        //        let app = test::init_service(App::new().service(get)).await;
-        //        let req = test::TestRequest::get().uri("/get").to_request();
-        //
-        //        let resp = test::call_service(&app, req).await;
-        //        println!("{:?}", resp);
-        //
-        //        assert!(resp.status().is_success());
+    async fn test_get() {
+        let app = test::init_service(App::new().service(get)).await;
+        let req = test::TestRequest::get().uri("/keys").to_request();
+
+        let resp = test::call_service(&app, req).await;
+        println!("{:?}", resp);
+
+        assert!(resp.status().is_success());
     }
 
     #[actix_web::test]
