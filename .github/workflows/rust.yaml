@@ -50,10 +50,13 @@ jobs:
       - name: Run tests
         run: cargo test
 
-      - name: Push to Codecov
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Run tarpaulin
         run: |
           cargo install cargo-tarpaulin
           cargo tarpaulin --out Xml
-          bash <(curl -s https://codecov.io/bash) -X gcov -t $CODECOV_TOKEN
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: true
+          verbose: true
