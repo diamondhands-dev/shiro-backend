@@ -1,6 +1,5 @@
-use actix_web::{put, web, HttpResponse, Responder};
-//use actix_web::{get, put, web, HttpResponse, Responder};
-use rgb_lib::keys::generate_keys;
+use actix_web::{post, put, web, HttpResponse, Responder};
+use rgb_lib::keys::{generate_keys, restore_keys};
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -14,10 +13,24 @@ struct KeyGenResult {
     xpub_fingerprint: String,
 }
 
-//#[get("/keys")]
-//pub async fn get() -> impl Responder {
-//    ""
-//}
+#[derive(Serialize, Deserialize)]
+pub struct KeyRestoreParams {
+    mnemonic: String,
+}
+
+#[post("/keys")]
+pub async fn post(params: web::Json<KeyRestoreParams>) -> impl Responder {
+    let network = shiro_backend::opts::get_bitcoin_network();
+    let result = restore_keys(network, params.mnemonic.clone());
+    match result {
+        Result::Ok(keys) => HttpResponse::Ok().json(KeyGenResult {
+            mnemonic: keys.mnemonic,
+            xpub: keys.xpub,
+            xpub_fingerprint: keys.xpub_fingerprint,
+        }),
+        Result::Err(_) => HttpResponse::BadRequest().body("Invalid mnemonic"),
+    }
+}
 
 #[put("/keys")]
 pub async fn put(_params: web::Json<KeyGenParams>) -> impl Responder {
@@ -36,23 +49,60 @@ pub async fn put(_params: web::Json<KeyGenParams>) -> impl Responder {
 mod tests {
     use super::*;
     use actix_web::{
-        body,
-        body::MessageBody as _,
-        http::{self, header::ContentType},
-        rt::pin,
+        http,
         test::{self, read_body_json},
-        web, App,
+        App,
     };
 
     #[actix_web::test]
-    async fn get() {
-        //        let app = test::init_service(App::new().service(get)).await;
-        //        let req = test::TestRequest::get().uri("/get").to_request();
-        //
-        //        let resp = test::call_service(&app, req).await;
-        //        println!("{:?}", resp);
-        //
-        //        assert!(resp.status().is_success());
+    async fn test_post_with_no_json() {
+        let app = test::init_service(App::new().service(post)).await;
+        let req = test::TestRequest::post().uri("/keys").to_request();
+
+        let resp = test::call_service(&app, req).await;
+        println!("{:?}", resp);
+
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+    }
+
+    #[actix_web::test]
+    async fn test_post_with_bad_mnemonic() {
+        let app = test::init_service(App::new().service(post)).await;
+        let payload = KeyRestoreParams {
+            mnemonic: ("save call film frog usual market noodle hope stomach chat word worry bad")
+                .to_string(),
+        };
+        let req = test::TestRequest::post()
+            .uri("/keys")
+            .set_json(payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+        println!("{:?}", resp);
+
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+    }
+
+    #[actix_web::test]
+    async fn test_post() {
+        let app = test::init_service(App::new().service(post)).await;
+        let payload = KeyRestoreParams {
+            mnemonic: ("save call film frog usual market noodle hope stomach chat word worry")
+                .to_string(),
+        };
+        let req = test::TestRequest::post()
+            .uri("/keys")
+            .set_json(payload)
+            .to_request();
+
+        let result: KeyGenResult = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(
+            result.mnemonic,
+            ("save call film frog usual market noodle hope stomach chat word worry").to_string()
+        );
+        assert_eq!(result.xpub, "xpub661MyMwAqRbcGexM5um6FYobDPjNH1tmWjxhDkbhfHfxvNpdsmhnvzCDGfemmmNLagBTSSno9nxvaknvDDvqux8sQqrfGPGzFc2JKnf4KL9".to_string());
+        assert_eq!(result.xpub_fingerprint, "60ec7707");
     }
 
     #[actix_web::test]
