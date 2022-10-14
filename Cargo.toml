@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.2.1"
+clap = { version = "4.0.15", features = ["derive"] }
 rgb-lib = { git = "https://github.com/RGB-Tools/rgb-lib", rev = "5f1f097" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
