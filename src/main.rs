@@ -1,12 +1,16 @@
-use actix_web::{App, HttpServer};
+use actix_web::{web, App, HttpServer};
+use std::sync::{Arc, RwLock};
 
 mod healthz;
 mod keys;
+mod wallet;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
+    let wallet_state = Arc::new(RwLock::new(wallet::WalletState::new()));
+    HttpServer::new(move || {
         App::new()
+            .app_data(web::Data::new(wallet_state.clone()))
             .service(healthz::get)
             .service(keys::post)
             .service(keys::put)
