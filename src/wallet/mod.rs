@@ -1,6 +1,9 @@
+use actix_web::{put, web, HttpResponse, Responder};
 use rgb_lib::wallet::{Wallet, WalletData};
+use serde::Deserialize;
+use serde::Serialize;
+use std::sync::{Arc, RwLock};
 
-#[allow(dead_code)]
 pub struct WalletState {
     wallet_data: Option<WalletData>,
 }
@@ -10,7 +13,6 @@ impl WalletState {
         WalletState { wallet_data: None }
     }
 
-    #[allow(dead_code)]
     pub fn update(&mut self, pubkey: String, mnemonic: String) -> WalletData {
         let base_data = shiro_backend::opts::get_wallet_data();
         let wallet_data = WalletData {
@@ -26,8 +28,103 @@ impl WalletState {
         wallet_data
     }
 
-    #[allow(dead_code)]
     pub fn exists(&self) -> bool {
         self.wallet_data.is_some()
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct WalletParams {
+    mnemonic: String,
+    pubkey: String,
+}
+
+#[put("/wallet")]
+pub async fn put(
+    params: web::Json<WalletParams>,
+    arc: web::Data<Arc<RwLock<WalletState>>>,
+) -> impl Responder {
+    if let Ok(mut wallet_state) = arc.write() {
+        wallet_state.update(params.pubkey.clone(), params.mnemonic.clone());
+        if wallet_state.exists() {
+            HttpResponse::Ok().json(params)
+        } else {
+            HttpResponse::BadRequest().body("")
+        }
+    } else {
+        HttpResponse::BadRequest().body("")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use actix_web::{body, body::MessageBody as _, http, rt::pin, test, web, App};
+
+    #[actix_web::test]
+    async fn test_put_failed() {
+        let wallet_state = Arc::new(RwLock::new(WalletState::new()));
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(wallet_state.clone()))
+                .service(put),
+        )
+        .await;
+        let wallet_params = WalletParams {
+            mnemonic: "".to_string(),
+            pubkey: "".to_string(),
+        };
+        let req = test::TestRequest::put()
+            .uri("/wallet")
+            .set_json(wallet_params)
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        println!("{:?}", resp);
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+    }
+
+    #[actix_web::test]
+    async fn test_put_bad() {
+        let wallet_state = Arc::new(RwLock::new(WalletState::new()));
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(wallet_state.clone()))
+                .service(put),
+        )
+        .await;
+        let wallet_params = WalletParams {
+            mnemonic: "save call film frog usual market noodle hope stomach chat word worry bad".to_string(),
+            pubkey: "xpub661MyMwAqRbcGexM5um6FYobDPjNH1tmWjxhDkbhfHfxvNpdsmhnvzCDGfemmmNLagBTSSno9nxvaknvDDvqux8sQqrfGPGzFc2JKnf4KL9".to_string(),
+        };
+        let req = test::TestRequest::put()
+            .uri("/wallet")
+            .set_json(wallet_params)
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        println!("{:?}", resp);
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+    }
+
+    #[actix_web::test]
+    async fn test_put() {
+        let wallet_state = Arc::new(RwLock::new(WalletState::new()));
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(wallet_state.clone()))
+                .service(put),
+        )
+        .await;
+        let wallet_params = WalletParams {
+            mnemonic: "save call film frog usual market noodle hope stomach chat word worry".to_string(),
+            pubkey: "xpub661MyMwAqRbcGexM5um6FYobDPjNH1tmWjxhDkbhfHfxvNpdsmhnvzCDGfemmmNLagBTSSno9nxvaknvDDvqux8sQqrfGPGzFc2JKnf4KL9".to_string(),
+        };
+        let req = test::TestRequest::put()
+            .uri("/wallet")
+            .set_json(wallet_params)
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        println!("{:?}", resp);
+        assert!(resp.status().is_success());
     }
 }

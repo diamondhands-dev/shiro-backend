@@ -47,6 +47,10 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - run: mkdir /tmp/shiro-wallet
+
+      - run: bash test-mocks/start_services.sh  
+
       - name: Run tarpaulin
         env:
           RUST_TEST_THREADS: 1
