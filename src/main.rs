@@ -15,6 +15,7 @@ async fn main() -> std::io::Result<()> {
             .service(keys::post)
             .service(keys::put)
             .service(wallet::put)
+            .service(wallet::dir::get)
     })
     .bind("127.0.0.1:8080")?
     .run()
