@@ -4,6 +4,8 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::sync::{Arc, RwLock};
 
+pub mod dir;
+
 pub struct WalletState {
     wallet_data: Option<WalletData>,
 }
@@ -24,7 +26,7 @@ impl WalletState {
         };
         if Wallet::new(wallet_data.clone()).is_ok() {
             self.wallet_data = Some(wallet_data.clone());
-        };
+        }
         wallet_data
     }
 
