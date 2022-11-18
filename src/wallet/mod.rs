@@ -6,6 +6,7 @@ use std::sync::{Arc, RwLock};
 
 pub mod data;
 pub mod dir;
+pub mod go_online;
 
 pub struct WalletState {
     wallet_data: Option<WalletData>,
@@ -29,6 +30,16 @@ impl WalletState {
             self.wallet_data = Some(wallet_data.clone());
         }
         wallet_data
+    }
+
+    pub fn new_wallet(&self) -> Option<Wallet> {
+        let wallet_data = &self.wallet_data;
+        if let Some(wallet_data) = wallet_data {
+            if let Ok(wallet) = Wallet::new(wallet_data.clone()) {
+                return Some(wallet);
+            }
+        }
+        None
     }
 
     pub fn exists(&self) -> bool {
