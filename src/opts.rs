@@ -11,6 +11,7 @@ struct Args {
 
     /// Name of BitcoinNetwork
     #[arg(
+        env = "BITCOIN_NETWORK_NAME",
         short,
         long,
         default_value_t = parser::BitcoinNetwork::Mainnet,
