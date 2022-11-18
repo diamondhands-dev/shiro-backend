@@ -71,7 +71,7 @@ mod tests {
         .await;
         let wallet_params = crate::wallet::WalletParams {
             mnemonic: "save call film frog usual market noodle hope stomach chat word worry".to_string(),
-            pubkey: "xpub661MyMwAqRbcGexM5um6FYobDPjNH1tmWjxhDkbhfHfxvNpdsmhnvzCDGfemmmNLagBTSSno9nxvaknvDDvqux8sQqrfGPGzFc2JKnf4KL9".to_string(),
+            pubkey: "tpubD6NzVbkrYhZ4YT9CY6kBTU8xYWq2GQPq4NYzaJer1CRrffVLwzYt5Rs3WhjZJGKaNaiN42JfgtnyGwHXc5n5oPbAUSbxwuwDqZci5kdAZHb".to_string(),
         };
         let wallet_req = test::TestRequest::put()
             .uri("/wallet")

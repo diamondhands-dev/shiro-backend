@@ -101,7 +101,7 @@ mod tests {
             result.mnemonic,
             ("save call film frog usual market noodle hope stomach chat word worry").to_string()
         );
-        assert_eq!(result.xpub, "xpub661MyMwAqRbcGexM5um6FYobDPjNH1tmWjxhDkbhfHfxvNpdsmhnvzCDGfemmmNLagBTSSno9nxvaknvDDvqux8sQqrfGPGzFc2JKnf4KL9".to_string());
+        assert_eq!(result.xpub, "tpubD6NzVbkrYhZ4YT9CY6kBTU8xYWq2GQPq4NYzaJer1CRrffVLwzYt5Rs3WhjZJGKaNaiN42JfgtnyGwHXc5n5oPbAUSbxwuwDqZci5kdAZHb".to_string());
         assert_eq!(result.xpub_fingerprint, "60ec7707");
     }
 
@@ -120,7 +120,7 @@ mod tests {
         assert!(resp.status().is_success());
         let result: KeyGenResult = read_body_json(resp).await;
         assert_eq!(result.mnemonic.split(' ').count(), 12);
-        assert!(result.xpub.starts_with("xpub"));
+        assert!(result.xpub.starts_with("tpub"));
         assert_ne!(result.xpub_fingerprint, "");
     }
 }

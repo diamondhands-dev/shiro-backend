@@ -54,6 +54,7 @@ jobs:
       - name: Run tarpaulin
         env:
           RUST_TEST_THREADS: 1
+          BITCOIN_NETWORK_NAME: regtest
         run: |
           cargo install cargo-tarpaulin
           cargo tarpaulin --release --out Xml
