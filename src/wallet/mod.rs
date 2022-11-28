@@ -4,6 +4,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::sync::{Arc, RwLock};
 
+pub mod address;
 pub mod data;
 pub mod dir;
 pub mod go_online;
