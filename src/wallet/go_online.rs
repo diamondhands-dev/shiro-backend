@@ -1,6 +1,5 @@
 use crate::wallet::WalletState;
 use actix_web::{put, web, HttpResponse, Responder};
-use rgb_lib::wallet::Wallet;
 use serde::Deserialize;
 use serde::Serialize;
 use std::sync::{Arc, RwLock};
@@ -25,46 +24,25 @@ pub async fn put(
     params: web::Json<GoOnlineParams>,
     arc: web::Data<Arc<RwLock<WalletState>>>,
 ) -> impl Responder {
-    let wallet_state = match arc.write() {
+    let mut wallet_state = match arc.write() {
         Ok(wallet_state) => wallet_state,
         Err(e) => return HttpResponse::BadRequest().body(e.to_string()),
     };
-    match wallet_state.new_wallet().await {
-        Some(wallet) => {
-            match _go_online(
-                wallet,
-                params.skip_consistency_check,
-                params.electrum_url.clone(),
-                params.proxy_url.clone(),
-            )
-            .await
-            {
-                Ok(online) => HttpResponse::Ok().json(online),
-                Err(e) => HttpResponse::BadRequest().body(e.to_string()),
-            }
-        }
-        None => HttpResponse::BadRequest().body(""),
+    match wallet_state
+        .update_online(
+            params.skip_consistency_check,
+            params.electrum_url.clone(),
+            params.proxy_url.clone(),
+        )
+        .await
+    {
+        Ok(online) => HttpResponse::Ok().json(GoOnlineResult {
+            id: online.id.to_string(),
+            electrum_url: online.electrum_url,
+            proxy_url: online.proxy_url,
+        }),
+        Err(e) => HttpResponse::BadRequest().body(e.to_string()),
     }
-}
-
-async fn _go_online(
-    mut wallet: Wallet,
-    skip_consistency_check: bool,
-    electrum_url: String,
-    proxy_url: String,
-) -> Result<GoOnlineResult, rgb_lib::Error> {
-    actix_web::rt::task::spawn_blocking(move || {
-        match wallet.go_online(skip_consistency_check, electrum_url, proxy_url) {
-            Ok(online) => Ok(GoOnlineResult {
-                id: online.id.to_string(),
-                electrum_url: online.electrum_url.clone(),
-                proxy_url: online.proxy_url,
-            }),
-            Err(e) => Err(e),
-        }
-    })
-    .await
-    .unwrap()
 }
 
 #[cfg(test)]

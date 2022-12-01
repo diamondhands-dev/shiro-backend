@@ -1,5 +1,5 @@
 use actix_web::{put, web, HttpResponse, Responder};
-use rgb_lib::wallet::{Wallet, WalletData};
+use rgb_lib::wallet::{Online, Wallet, WalletData};
 use serde::Deserialize;
 use serde::Serialize;
 use std::sync::{Arc, RwLock};
@@ -11,11 +11,15 @@ pub mod go_online;
 
 pub struct WalletState {
     wallet_data: Option<WalletData>,
+    online: Option<Online>,
 }
 
 impl WalletState {
     pub fn new() -> Self {
-        WalletState { wallet_data: None }
+        WalletState {
+            wallet_data: None,
+            online: None,
+        }
     }
 
     pub async fn update(&mut self, pubkey: String, mnemonic: String) -> WalletData {
@@ -47,6 +51,44 @@ impl WalletState {
         actix_web::rt::task::spawn_blocking(move || Wallet::new(wallet_data))
             .await
             .unwrap()
+    }
+
+    pub async fn update_online(
+        &mut self,
+        skip_contestency_check: bool,
+        electrum_url: String,
+        proxy_url: String,
+    ) -> Result<Online, rgb_lib::Error> {
+        let wallet = self.new_wallet().await;
+        if let Some(wallet) = wallet {
+            match Self::_go_online(wallet, skip_contestency_check, electrum_url, proxy_url).await {
+                Ok(online) => {
+                    self.online = Some(online.clone());
+                    Ok(online)
+                }
+                Err(e) => Err(e),
+            }
+        } else {
+            Err(rgb_lib::Error::InvalidOnline())
+        }
+    }
+
+    async fn _go_online(
+        mut wallet: Wallet,
+        skip_contestency_check: bool,
+        electrum_url: String,
+        proxy_url: String,
+    ) -> Result<Online, rgb_lib::Error> {
+        actix_web::rt::task::spawn_blocking(move || {
+            wallet.go_online(skip_contestency_check, electrum_url, proxy_url)
+        })
+        .await
+        .unwrap()
+    }
+
+    #[allow(dead_code)]
+    pub fn get_online(&self) -> Option<Online> {
+        self.online.clone()
     }
 
     pub fn exists(&self) -> bool {
@@ -84,7 +126,7 @@ pub async fn put(
 mod tests {
     use super::*;
 
-    use actix_web::{body, body::MessageBody as _, http, rt::pin, test, web, App};
+    use actix_web::{http, test, web, App};
 
     #[actix_web::test]
     async fn test_put_failed() {
