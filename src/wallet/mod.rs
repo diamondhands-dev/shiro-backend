@@ -18,7 +18,7 @@ impl WalletState {
         WalletState { wallet_data: None }
     }
 
-    pub fn update(&mut self, pubkey: String, mnemonic: String) -> WalletData {
+    pub async fn update(&mut self, pubkey: String, mnemonic: String) -> WalletData {
         let base_data = shiro_backend::opts::get_wallet_data();
         let wallet_data = WalletData {
             data_dir: base_data.data_dir,
@@ -27,20 +27,26 @@ impl WalletState {
             pubkey,
             mnemonic: Some(mnemonic),
         };
-        if Wallet::new(wallet_data.clone()).is_ok() {
+        if self._new_wallet(wallet_data.clone()).await.is_ok() {
             self.wallet_data = Some(wallet_data.clone());
         }
         wallet_data
     }
 
-    pub fn new_wallet(&self) -> Option<Wallet> {
+    pub async fn new_wallet(&self) -> Option<Wallet> {
         let wallet_data = &self.wallet_data;
         if let Some(wallet_data) = wallet_data {
-            if let Ok(wallet) = Wallet::new(wallet_data.clone()) {
+            if let Ok(wallet) = self._new_wallet(wallet_data.clone()).await {
                 return Some(wallet);
             }
         }
         None
+    }
+
+    async fn _new_wallet(&self, wallet_data: WalletData) -> Result<Wallet, rgb_lib::Error> {
+        actix_web::rt::task::spawn_blocking(move || Wallet::new(wallet_data))
+            .await
+            .unwrap()
     }
 
     pub fn exists(&self) -> bool {
@@ -55,12 +61,15 @@ pub struct WalletParams {
 }
 
 #[put("/wallet")]
+#[allow(clippy::await_holding_lock)]
 pub async fn put(
     params: web::Json<WalletParams>,
     arc: web::Data<Arc<RwLock<WalletState>>>,
 ) -> impl Responder {
     if let Ok(mut wallet_state) = arc.write() {
-        wallet_state.update(params.pubkey.clone(), params.mnemonic.clone());
+        wallet_state
+            .update(params.pubkey.clone(), params.mnemonic.clone())
+            .await;
         if wallet_state.exists() {
             HttpResponse::Ok().json(params)
         } else {
