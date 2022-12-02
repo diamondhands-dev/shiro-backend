@@ -14,7 +14,7 @@ pub struct AddressResult {
 #[get("/wallet/address")]
 pub async fn get(arc: web::Data<Arc<RwLock<WalletState>>>) -> impl Responder {
     if let Ok(wallet_state) = arc.write() {
-        match wallet_state.new_wallet() {
+        match wallet_state.new_wallet().await {
             Some(wallet) => HttpResponse::Ok().json(AddressResult {
                 new_address: _new_address(wallet).await.unwrap(),
             }),

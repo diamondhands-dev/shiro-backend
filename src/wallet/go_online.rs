@@ -29,7 +29,7 @@ pub async fn put(
         Ok(wallet_state) => wallet_state,
         Err(e) => return HttpResponse::BadRequest().body(e.to_string()),
     };
-    match wallet_state.new_wallet() {
+    match wallet_state.new_wallet().await {
         Some(wallet) => {
             match _go_online(
                 wallet,
