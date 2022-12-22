@@ -1,9 +1,8 @@
-use crate::wallet::WalletState;
 use actix_web::{get, web, HttpResponse, Responder};
-use rgb_lib::wallet::Wallet;
+use crate::ShiroWallet;
 use serde::Deserialize;
 use serde::Serialize;
-use std::sync::{Arc, RwLock};
+use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
 pub struct AddressResult {
@@ -12,35 +11,34 @@ pub struct AddressResult {
 
 #[allow(clippy::await_holding_lock)]
 #[get("/wallet/address")]
-pub async fn get(arc: web::Data<Arc<RwLock<WalletState>>>) -> impl Responder {
-    if let Ok(wallet_state) = arc.write() {
-        match wallet_state.new_wallet().await {
-            Some(wallet) => HttpResponse::Ok().json(AddressResult {
-                new_address: _new_address(wallet).await.unwrap(),
+pub async fn get(mtx: web::Data<Mutex<ShiroWallet>>) -> impl Responder {
+    if let Ok(shiro_wallet) = mtx.lock() {
+        let result = shiro_wallet.get_wallet_state().new_address().await;
+        match result {
+            Ok(address) => HttpResponse::Ok().json(AddressResult {
+                new_address: address,
             }),
-            None => HttpResponse::BadRequest().body(""),
+            Err(err) => HttpResponse::BadRequest().body("a"),
         }
     } else {
-        HttpResponse::BadRequest().body("")
+        HttpResponse::BadRequest().body("a")
     }
-}
-
-async fn _new_address(wallet: Wallet) -> Result<String, actix_web::rt::task::JoinError> {
-    actix_web::rt::task::spawn_blocking(move || wallet.get_address()).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use actix_web::{body, body::MessageBody as _, http, rt::pin, test, web, App};
+    use actix_web::{test, web, App};
+    use crate::tests::WalletTestContext;
+    use test_context::test_context;
 
+    #[test_context(WalletTestContext)]
     #[actix_web::test]
-    async fn test_get() {
-        let wallet_state = Arc::new(RwLock::new(WalletState::new()));
+    async fn test_get(ctx: &mut WalletTestContext) {
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(wallet_state.clone()))
+                .app_data(web::Data::new(ctx.get_wallet_state()))
                 .service(get)
                 .service(crate::wallet::put),
         )

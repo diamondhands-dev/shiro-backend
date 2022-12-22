@@ -4,7 +4,7 @@ use rgb_lib::wallet::WalletData;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
-struct Args {
+pub struct Args {
     /// Path to data_dir
     #[arg(long, default_value = "/tmp/shiro-wallet")]
     data_dir: String,
@@ -28,8 +28,29 @@ struct Args {
     )]
     database_type: parser::DatabaseType,
 
+    #[arg(env = "ELECTRUM_URL",
+          long = "electrum-url",
+          default_value = "127.0.0.1:50001")]
+    pub electrum_url: String,
+
+    #[arg(env = "RGB_PROXY_URL",
+          long = "proxy-url",
+          default_value = "http://proxy.rgbtools.org")]
+    pub proxy_url: String,
+
     #[arg(long = "show-output")]
     show_output: bool,
+
+    #[arg(
+        long,
+        default_value_t = true
+        )]
+    pub skip_consistency_check: bool,
+
+}
+
+pub fn get_args() -> Args {
+    Args::parse()
 }
 
 mod parser {

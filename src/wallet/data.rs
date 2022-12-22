@@ -1,10 +1,11 @@
 use crate::wallet::WalletState;
+use crate::wallet::WalletState::{WalletDataE, WalletE};
 use actix_web::{get, web, HttpResponse, Responder};
 use rgb_lib::wallet::DatabaseType;
 use rgb_lib::BitcoinNetwork;
 use serde::Deserialize;
 use serde::Serialize;
-use std::sync::{Arc, RwLock};
+use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
 pub struct WalletDataResponse {
@@ -21,32 +22,33 @@ pub struct WalletDataResponse {
 }
 
 #[get("/wallet/data")]
-pub async fn get(arc: web::Data<Arc<RwLock<WalletState>>>) -> impl Responder {
-    if let Ok(wallet_state) = arc.write() {
-        if let Some(wallet_data) = &wallet_state.wallet_data {
-            HttpResponse::Ok().json(WalletDataResponse {
-                data_dir: wallet_data.data_dir.clone(),
-                bitcoin_network: match wallet_data.bitcoin_network {
-                    BitcoinNetwork::Mainnet => "mainnet",
-                    BitcoinNetwork::Testnet => "testnet",
-                    BitcoinNetwork::Regtest => "regtest",
-                    BitcoinNetwork::Signet => "signet",
-                }
-                .to_string(),
-                database_type: match wallet_data.database_type {
-                    DatabaseType::Sqlite => "sqlite",
-                }
-                .to_string(),
-                pubkey: wallet_data.pubkey.clone(),
-                mnemonic: if let Some(mnemonic) = &wallet_data.mnemonic {
-                    mnemonic.clone()
-                } else {
-                    "".to_string()
-                },
-            })
-        } else {
-            HttpResponse::BadRequest().body("")
-        }
+pub async fn get(mtx: web::Data<Mutex<WalletState>>) -> impl Responder {
+    if let Ok(wallet_state) = mtx.lock() {
+        let wallet_data = match &*wallet_state {
+            WalletDataE(wallet_data) => match wallet_data.clone() {
+                    Some(wallet_data) => wallet_data,
+                    None => return HttpResponse::BadRequest().body(""),
+            },
+            WalletE(wallet) => wallet.get_wallet_data(),
+        };
+        HttpResponse::Ok().json(WalletDataResponse {
+            data_dir: wallet_data.data_dir.clone(),
+            bitcoin_network: match wallet_data.bitcoin_network {
+                BitcoinNetwork::Mainnet => "mainnet",
+                BitcoinNetwork::Testnet => "testnet",
+                BitcoinNetwork::Regtest => "regtest",
+                BitcoinNetwork::Signet => "signet",
+            }.to_string(),
+            database_type: match wallet_data.database_type {
+                DatabaseType::Sqlite => "sqlite",
+            }.to_string(),
+            pubkey: wallet_data.pubkey.clone(),
+            mnemonic: if let Some(mnemonic) = &wallet_data.mnemonic {
+                mnemonic.clone()
+            } else {
+                "".to_string()
+            },
+        })
     } else {
         HttpResponse::BadRequest().body("")
     }
@@ -57,12 +59,16 @@ mod tests {
     use super::*;
     use actix_web::{http, test, App};
 
+    use crate::tests::WalletTestContext;
+    use test_context::test_context;
+
+    #[test_context(WalletTestContext)]
     #[actix_web::test]
-    async fn test_get_failed() {
-        let wallet_state = Arc::new(RwLock::new(WalletState::new()));
+    #[ignore]
+    async fn test_get_failed(ctx: &mut WalletTestContext) {
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(wallet_state.clone()))
+                .app_data(web::Data::new(ctx.get_wallet_state()))
                 .service(get)
                 .service(crate::wallet::put),
         )
@@ -87,12 +93,13 @@ mod tests {
         assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
     }
 
+    #[test_context(WalletTestContext)]
     #[actix_web::test]
-    async fn test_get() {
-        let wallet_state = Arc::new(RwLock::new(WalletState::new()));
+    #[ignore]
+    async fn test_get(ctx: &mut WalletTestContext) {
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(wallet_state.clone()))
+                .app_data(web::Data::new(ctx.get_wallet_state()))
                 .service(get)
                 .service(crate::wallet::put),
         )

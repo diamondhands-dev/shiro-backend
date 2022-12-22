@@ -1,8 +1,9 @@
-use crate::wallet::WalletState;
+use crate::wallet::WalletState::{WalletDataE, WalletE};
+use crate::ShiroWallet;
 use actix_web::{get, web, HttpResponse, Responder};
 use serde::Deserialize;
 use serde::Serialize;
-use std::sync::{Arc, RwLock};
+use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
 pub struct WalletDir {
@@ -10,14 +11,24 @@ pub struct WalletDir {
 }
 
 #[get("/wallet/dir")]
-pub async fn get(arc: web::Data<Arc<RwLock<WalletState>>>) -> impl Responder {
-    if let Ok(wallet_state) = arc.write() {
-        if let Some(wallet_data) = &wallet_state.wallet_data {
-            HttpResponse::Ok().json(WalletDir {
-                wallet_dir: wallet_data.data_dir.clone(),
-            })
-        } else {
-            HttpResponse::BadRequest().body("")
+pub async fn get(mtx: web::Data<Mutex<ShiroWallet>>) -> impl Responder {
+    if let Ok(shiro_wallet) = mtx.lock() {
+        match shiro_wallet.get_wallet_state() {
+            WalletDataE(wallet_data) => {
+                match wallet_data {
+                    Some(wallet_data) => {
+                        HttpResponse::Ok().json(WalletDir {
+                            wallet_dir: wallet_data.data_dir.clone(),
+                        })
+                    },
+                    None => HttpResponse::BadRequest().body(""),
+                }
+            },
+            WalletE(wallet) => {
+                HttpResponse::Ok().json(WalletDir {
+                    wallet_dir: wallet.get_wallet_dir().into_os_string().into_string().unwrap(),
+                })
+            }
         }
     } else {
         HttpResponse::BadRequest().body("")
@@ -28,13 +39,16 @@ pub async fn get(arc: web::Data<Arc<RwLock<WalletState>>>) -> impl Responder {
 mod tests {
     use super::*;
     use actix_web::{http, test, App};
+    use crate::tests::WalletTestContext;
+    use test_context::test_context;
 
+    #[ignore]
+    #[test_context(WalletTestContext)]
     #[actix_web::test]
-    async fn test_get_failed() {
-        let wallet_state = Arc::new(RwLock::new(WalletState::new()));
+    async fn test_get_failed(ctx: &mut WalletTestContext) {
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(wallet_state.clone()))
+                .app_data(web::Data::new(ctx.get_wallet_state()))
                 .service(get)
                 .service(crate::wallet::put),
         )
@@ -59,12 +73,12 @@ mod tests {
         assert_eq!(wallet_resp.status(), http::StatusCode::BAD_REQUEST);
     }
 
+    #[test_context(WalletTestContext)]
     #[actix_web::test]
-    async fn test_get() {
-        let wallet_state = Arc::new(RwLock::new(WalletState::new()));
+    async fn test_get(ctx: &mut WalletTestContext) {
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(wallet_state.clone()))
+                .app_data(web::Data::new(ctx.get_wallet_state()))
                 .service(get)
                 .service(crate::wallet::put),
         )
