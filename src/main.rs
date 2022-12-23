@@ -1,5 +1,5 @@
 use actix_web::{web, App, HttpServer};
-use crate::wallet::ShiroWallet;
+use crate::wallet::{ShiroWallet, WalletState};
 use std::sync::{Mutex, MutexGuard};
 
 mod healthz;

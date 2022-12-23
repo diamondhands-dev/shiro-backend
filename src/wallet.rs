@@ -8,7 +8,6 @@ use std::sync::Mutex;
 pub mod address;
 pub mod data;
 pub mod dir;
-pub mod utxos;
 
 pub struct ShiroWallet {
     pub wallet_state: WalletState,
