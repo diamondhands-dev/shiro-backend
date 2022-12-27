@@ -12,7 +12,7 @@ pub struct AddressResult {
 #[allow(clippy::await_holding_lock)]
 #[get("/wallet/address")]
 pub async fn get(mtx: web::Data<Mutex<ShiroWallet>>) -> impl Responder {
-    if let Ok(shiro_wallet) = mtx.lock() {
+    if let Ok(mut shiro_wallet) = mtx.lock() {
         let result = shiro_wallet.get_wallet_state().new_address().await;
         match result {
             Ok(address) => HttpResponse::Ok().json(AddressResult {
@@ -30,15 +30,13 @@ mod tests {
     use super::*;
 
     use actix_web::{test, web, App};
-    use crate::tests::WalletTestContext;
-    use test_context::test_context;
 
-    #[test_context(WalletTestContext)]
     #[actix_web::test]
-    async fn test_get(ctx: &mut WalletTestContext) {
+    async fn test_get() {
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(ctx.get_wallet_state()))
+                .app_data(web::Data::new(shiro_wallet))
                 .service(get)
                 .service(crate::wallet::put),
         )

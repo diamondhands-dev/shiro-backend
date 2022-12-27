@@ -59,16 +59,15 @@ mod tests {
     use super::*;
     use actix_web::{http, test, App};
 
-    use crate::tests::WalletTestContext;
-    use test_context::test_context;
+    use crate::wallet::ShiroWallet;
 
-    #[test_context(WalletTestContext)]
     #[actix_web::test]
     #[ignore]
-    async fn test_get_failed(ctx: &mut WalletTestContext) {
+    async fn test_get_failed() {
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(ctx.get_wallet_state()))
+                .app_data(web::Data::new(shiro_wallet))
                 .service(get)
                 .service(crate::wallet::put),
         )
@@ -93,13 +92,13 @@ mod tests {
         assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
     }
 
-    #[test_context(WalletTestContext)]
     #[actix_web::test]
     #[ignore]
-    async fn test_get(ctx: &mut WalletTestContext) {
+    async fn test_get() {
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(ctx.get_wallet_state()))
+                .app_data(web::Data::new(shiro_wallet))
                 .service(get)
                 .service(crate::wallet::put),
         )

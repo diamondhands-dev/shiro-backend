@@ -21,11 +21,11 @@ impl ShiroWallet {
             online: None,
         }
     }
-    pub fn get_wallet_state(&self) -> WalletState {
-        self.wallet_state
+    pub fn get_wallet_state(&mut self) -> &mut WalletState {
+        &mut self.wallet_state
     }
-    pub fn get_online(&self) -> Option<Online> {
-        self.online
+    pub fn get_online(&self) -> &Option<Online> {
+        &self.online
     }
 }
 
@@ -105,15 +105,12 @@ impl WalletState {
         }
         match self {
             Self::WalletDataE(_) => Err(rgb_lib::Error::Inconsistency("".to_string())),
-            Self::WalletE(wallet) => match Self::_new_address(wallet).await {
-                Ok(address) => Ok(address),
-                Err(err) => Err(rgb_lib::Error::Inconsistency("new_address".to_string())),
-            }
+            Self::WalletE(wallet) => Ok(Self::_new_address(wallet).await)
         }
     }
 
-    async fn _new_address(wallet: &mut Wallet) -> Result<String, actix_web::rt::task::JoinError> {
-        actix_web::rt::task::spawn_blocking(move || wallet.get_address()).await
+    async fn _new_address(wallet: &mut Wallet) -> String {
+        wallet.get_address()
     }
 
     pub async fn new_wallet(&mut self) -> Result<(), rgb_lib::Error> {
@@ -129,6 +126,9 @@ impl WalletState {
                             Err(err) => Err(err),
                         }
                     },
+                    None => {
+                        unreachable!("temporary fix. to improve");
+                    }
                 }
             },
             Self::WalletE(wallet) => Ok(()),
@@ -166,13 +166,12 @@ pub struct WalletParams {
 }
 
 #[put("/wallet")]
-#[allow(clippy::await_holding_lock)]
 pub async fn put(
     params: web::Json<WalletParams>,
-    arc: web::Data<Mutex<WalletState>>,
+    arc: web::Data<Mutex<ShiroWallet>>,
 ) -> impl Responder {
-    if let Ok(mut wallet_state) = arc.lock() {
-        match wallet_state
+    if let Ok(mut shiro_wallet) = arc.lock() {
+        match shiro_wallet.wallet_state
             .update(params.pubkey.clone(), params.mnemonic.clone())
             .await {
             Some(wallet_data) => HttpResponse::Ok().json(params),
@@ -188,16 +187,14 @@ mod tests {
     use super::*;
 
     use actix_web::{http, test, web, App};
-    use crate::tests::WalletTestContext;
-    use test_context::test_context;
 
-    #[test_context(WalletTestContext)]
     #[actix_web::test]
     #[ignore]
-    async fn test_put_failed(ctx: &mut WalletTestContext) {
+    async fn test_put_failed() {
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(ctx.get_wallet_state()))
+                .app_data(web::Data::new(shiro_wallet))
                 .service(put),
         )
         .await;
@@ -214,13 +211,13 @@ mod tests {
         assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
     }
 
-    #[test_context(WalletTestContext)]
     #[actix_web::test]
     #[ignore]
-    async fn test_put_bad(ctx: &mut WalletTestContext) {
+    async fn test_put_bad() {
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(ctx.get_wallet_state()))
+                .app_data(web::Data::new(shiro_wallet))
                 .service(put),
         )
         .await;
@@ -237,12 +234,12 @@ mod tests {
         assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
     }
 
-    #[test_context(WalletTestContext)]
     #[actix_web::test]
-    async fn test_put(ctx: &mut WalletTestContext) {
+    async fn test_put() {
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(ctx.get_wallet_state()))
+                .app_data(web::Data::new(shiro_wallet))
                 .service(put),
         )
         .await;

@@ -12,7 +12,7 @@ pub struct WalletDir {
 
 #[get("/wallet/dir")]
 pub async fn get(mtx: web::Data<Mutex<ShiroWallet>>) -> impl Responder {
-    if let Ok(shiro_wallet) = mtx.lock() {
+    if let Ok(mut shiro_wallet) = mtx.lock() {
         match shiro_wallet.get_wallet_state() {
             WalletDataE(wallet_data) => {
                 match wallet_data {
@@ -39,16 +39,14 @@ pub async fn get(mtx: web::Data<Mutex<ShiroWallet>>) -> impl Responder {
 mod tests {
     use super::*;
     use actix_web::{http, test, App};
-    use crate::tests::WalletTestContext;
-    use test_context::test_context;
 
     #[ignore]
-    #[test_context(WalletTestContext)]
     #[actix_web::test]
-    async fn test_get_failed(ctx: &mut WalletTestContext) {
+    async fn test_get_failed() {
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(ctx.get_wallet_state()))
+                .app_data(web::Data::new(shiro_wallet))
                 .service(get)
                 .service(crate::wallet::put),
         )
@@ -73,12 +71,12 @@ mod tests {
         assert_eq!(wallet_resp.status(), http::StatusCode::BAD_REQUEST);
     }
 
-    #[test_context(WalletTestContext)]
     #[actix_web::test]
-    async fn test_get(ctx: &mut WalletTestContext) {
+    async fn test_get() {
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(ctx.get_wallet_state()))
+                .app_data(web::Data::new(shiro_wallet))
                 .service(get)
                 .service(crate::wallet::put),
         )
