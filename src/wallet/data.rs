@@ -1,5 +1,4 @@
-use crate::wallet::WalletState;
-use crate::wallet::WalletState::{WalletDataE, WalletE};
+use crate::wallet::ShiroWallet;
 use actix_web::{get, web, HttpResponse, Responder};
 use rgb_lib::wallet::DatabaseType;
 use rgb_lib::BitcoinNetwork;
@@ -22,35 +21,31 @@ pub struct WalletDataResponse {
 }
 
 #[get("/wallet/data")]
-pub async fn get(mtx: web::Data<Mutex<WalletState>>) -> impl Responder {
-    if let Ok(wallet_state) = mtx.lock() {
-        let wallet_data = match &*wallet_state {
-            WalletDataE(wallet_data) => match wallet_data.clone() {
-                    Some(wallet_data) => wallet_data,
-                    None => return HttpResponse::BadRequest().body(""),
-            },
-            WalletE(wallet) => wallet.get_wallet_data(),
-        };
+pub async fn get(data: web::Data<Mutex<ShiroWallet>>) -> impl Responder {
+    let shiro_wallet = data.lock().unwrap();
+    if let Some(wdata) = shiro_wallet.wallet_data.clone() {
         HttpResponse::Ok().json(WalletDataResponse {
-            data_dir: wallet_data.data_dir.clone(),
-            bitcoin_network: match wallet_data.bitcoin_network {
+            data_dir: wdata.data_dir.clone(),
+            bitcoin_network: match wdata.bitcoin_network {
                 BitcoinNetwork::Mainnet => "mainnet",
                 BitcoinNetwork::Testnet => "testnet",
                 BitcoinNetwork::Regtest => "regtest",
                 BitcoinNetwork::Signet => "signet",
-            }.to_string(),
-            database_type: match wallet_data.database_type {
+            }
+            .to_string(),
+            database_type: match wdata.database_type {
                 DatabaseType::Sqlite => "sqlite",
-            }.to_string(),
-            pubkey: wallet_data.pubkey.clone(),
-            mnemonic: if let Some(mnemonic) = &wallet_data.mnemonic {
+            }
+            .to_string(),
+            pubkey: wdata.pubkey.clone(),
+            mnemonic: if let Some(mnemonic) = &wdata.mnemonic {
                 mnemonic.clone()
             } else {
                 "".to_string()
             },
         })
     } else {
-        HttpResponse::BadRequest().body("")
+        HttpResponse::BadRequest().body("wallet data has not been provided")
     }
 }
 

@@ -1,5 +1,5 @@
-use actix_web::{get, web, HttpResponse, Responder};
 use crate::ShiroWallet;
+use actix_web::{get, web, HttpResponse, Responder};
 use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Mutex;
@@ -11,17 +11,16 @@ pub struct AddressResult {
 
 #[allow(clippy::await_holding_lock)]
 #[get("/wallet/address")]
-pub async fn get(mtx: web::Data<Mutex<ShiroWallet>>) -> impl Responder {
-    if let Ok(mut shiro_wallet) = mtx.lock() {
-        let result = shiro_wallet.get_wallet_state().new_address().await;
-        match result {
-            Ok(address) => HttpResponse::Ok().json(AddressResult {
+pub async fn get(data: web::Data<Mutex<ShiroWallet>>) -> impl Responder {
+    let shiro_wallet = data.lock().unwrap();
+    match &shiro_wallet.wallet {
+        Some(wallet) => {
+            let address = wallet.get_address();
+            HttpResponse::Ok().json(AddressResult {
                 new_address: address,
-            }),
-            Err(err) => HttpResponse::BadRequest().body("a"),
+            })
         }
-    } else {
-        HttpResponse::BadRequest().body("a")
+        None => HttpResponse::BadRequest().body("wallet should be created first"),
     }
 }
 

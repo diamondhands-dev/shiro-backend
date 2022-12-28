@@ -2,160 +2,26 @@ use actix_web::{put, web, HttpResponse, Responder};
 use rgb_lib::wallet::{Online, Wallet, WalletData};
 use serde::Deserialize;
 use serde::Serialize;
-use std::fmt;
 use std::sync::Mutex;
 
 pub mod address;
 pub mod data;
 pub mod dir;
+pub mod go_online;
 
 pub struct ShiroWallet {
-    pub wallet_state: WalletState,
+    pub wallet_data: Option<WalletData>,
+    pub wallet: Option<Wallet>,
     pub online: Option<Online>,
 }
 
 impl ShiroWallet {
     pub fn new() -> ShiroWallet {
         ShiroWallet {
-            wallet_state: WalletState::WalletDataE(None),
+            wallet_data: None,
+            wallet: None,
             online: None,
         }
-    }
-    pub fn get_wallet_state(&mut self) -> &mut WalletState {
-        &mut self.wallet_state
-    }
-    pub fn get_online(&self) -> &Option<Online> {
-        &self.online
-    }
-}
-
-pub enum WalletState {
-    WalletDataE(Option<WalletData>),
-    WalletE(Wallet),
-}
-
-/*
-impl fmt::Debug for WalletState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "wallet_data: ")?;
-        match &self.wallet_data {
-            Some(wallet_data) => {
-                writeln!(f, " data_dir: {:?}", wallet_data.data_dir)?;
-                //writeln!(f, " bitcoin_network: {:?}", wallet_data.bitcoin_network);
-                //writeln!(f, " database_type: {:?}", wallet_data.database_type);
-                writeln!(f, " pubkey: {:?}", wallet_data.pubkey)?;
-                writeln!(f, " mnemonic: {:?}", wallet_data.mnemonic)?;
-            },
-            None => writeln!(f, " None")?
-        }
-        writeln!(f, "online: ")?;
-        match &self.online {
-            Some(online) => {
-                writeln!(f, " id: {:?},", online.id)?;
-                writeln!(f, " electrum_url: {:?},", online.electrum_url)?;
-                writeln!(f, " proxy_url: {:?},", online.proxy_url)?;
-            },
-            None => writeln!(f, " None")?
-        };
-        Ok(())
-    }
-}
-*/
-
-impl WalletState {
-    pub fn new() -> Self {
-        Self::WalletDataE(None)
-    }
-
-    pub async fn update(&mut self, pubkey: String, mnemonic: String) -> Option<WalletData> {
-        match self {
-            Self::WalletDataE(wallet_data) => {
-                let base_data = shiro_backend::opts::get_wallet_data();
-                let wallet_data = WalletData {
-                    data_dir: base_data.data_dir,
-                    bitcoin_network: base_data.bitcoin_network,
-                    database_type: base_data.database_type,
-                    pubkey,
-                    mnemonic: Some(mnemonic),
-                };
-                match Self::_new_wallet(wallet_data.clone()).await {
-                    Ok(wallet) => {
-                        let wallet_data = wallet.get_wallet_data();
-                        *self = Self::WalletDataE(Some(wallet.get_wallet_data()));
-                        return Some(wallet_data);
-                    },
-                    Err(err) => {
-                        println!("{:?}", err);
-                        *self = Self::WalletDataE(None);
-                        return None;
-                    },
-                };
-            },
-            Self::WalletE(wallet) => {
-                return Some(wallet.get_wallet_data());
-            },
-            _ => None,
-        }
-    }
-
-    pub async fn new_address(&mut self) -> Result<String, rgb_lib::Error> {
-        match self.new_wallet().await {
-            Ok(_) => (),
-            Err(err) => return Err(err),
-        }
-        match self {
-            Self::WalletDataE(_) => Err(rgb_lib::Error::Inconsistency("".to_string())),
-            Self::WalletE(wallet) => Ok(Self::_new_address(wallet).await)
-        }
-    }
-
-    async fn _new_address(wallet: &mut Wallet) -> String {
-        wallet.get_address()
-    }
-
-    pub async fn new_wallet(&mut self) -> Result<(), rgb_lib::Error> {
-        match self {
-            Self::WalletDataE(options) => {
-                match options {
-                    Some(wallet_data) => {
-                        match Self::_new_wallet(wallet_data.clone()).await {
-                            Ok(wallet) => {
-                                *self = WalletState::WalletE(wallet);
-                                Ok(())
-                            },
-                            Err(err) => Err(err),
-                        }
-                    },
-                    None => {
-                        unreachable!("temporary fix. to improve");
-                    }
-                }
-            },
-            Self::WalletE(wallet) => Ok(()),
-        }
-    }
-
-    async fn _new_wallet(wallet_data: WalletData) -> Result<Wallet, rgb_lib::Error> {
-        actix_web::rt::task::spawn_blocking(move || Wallet::new(wallet_data))
-            .await
-            .unwrap()
-    }
-
-    async fn _go_online(
-        wallet_data: WalletData,
-        skip_contestency_check: bool,
-        electrum_url: String,
-        proxy_url: String,
-    ) -> Result<Online, rgb_lib::Error> {
-        actix_web::rt::task::spawn_blocking(move || {
-            let wallet = Wallet::new(wallet_data);
-            match wallet {
-                Ok(mut wallet) =>wallet.go_online(skip_contestency_check, electrum_url, proxy_url),
-                Err(e) => Err(e),
-            }
-        })
-        .await
-        .unwrap()
     }
 }
 
@@ -168,17 +34,27 @@ pub struct WalletParams {
 #[put("/wallet")]
 pub async fn put(
     params: web::Json<WalletParams>,
-    arc: web::Data<Mutex<ShiroWallet>>,
+    data: web::Data<Mutex<ShiroWallet>>,
 ) -> impl Responder {
-    if let Ok(mut shiro_wallet) = arc.lock() {
-        match shiro_wallet.wallet_state
-            .update(params.pubkey.clone(), params.mnemonic.clone())
-            .await {
-            Some(wallet_data) => HttpResponse::Ok().json(params),
-            None => HttpResponse::BadRequest().body(""),
+    let mut shiro_wallet = data.lock().unwrap();
+    match shiro_wallet.wallet {
+        Some(_) => HttpResponse::BadRequest().body("wallet already created"),
+        None => {
+            let base_data = shiro_backend::opts::get_wallet_data();
+            let wallet_data = WalletData {
+                data_dir: base_data.data_dir,
+                bitcoin_network: base_data.bitcoin_network,
+                database_type: base_data.database_type,
+                pubkey: params.pubkey.clone(),
+                mnemonic: Some(params.mnemonic.clone()),
+            };
+            let wlt =
+                actix_web::rt::task::spawn_blocking(move || Wallet::new(wallet_data).unwrap())
+                    .await
+                    .unwrap();
+            shiro_wallet.wallet = Some(wlt);
+            HttpResponse::Ok().json(params)
         }
-    } else {
-        HttpResponse::BadRequest().body("")
     }
 }
 

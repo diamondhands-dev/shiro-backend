@@ -1,4 +1,3 @@
-use crate::wallet::WalletState::{WalletDataE, WalletE};
 use crate::ShiroWallet;
 use actix_web::{get, web, HttpResponse, Responder};
 use serde::Deserialize;
@@ -11,27 +10,13 @@ pub struct WalletDir {
 }
 
 #[get("/wallet/dir")]
-pub async fn get(mtx: web::Data<Mutex<ShiroWallet>>) -> impl Responder {
-    if let Ok(mut shiro_wallet) = mtx.lock() {
-        match shiro_wallet.get_wallet_state() {
-            WalletDataE(wallet_data) => {
-                match wallet_data {
-                    Some(wallet_data) => {
-                        HttpResponse::Ok().json(WalletDir {
-                            wallet_dir: wallet_data.data_dir.clone(),
-                        })
-                    },
-                    None => HttpResponse::BadRequest().body(""),
-                }
-            },
-            WalletE(wallet) => {
-                HttpResponse::Ok().json(WalletDir {
-                    wallet_dir: wallet.get_wallet_dir().into_os_string().into_string().unwrap(),
-                })
-            }
-        }
-    } else {
-        HttpResponse::BadRequest().body("")
+pub async fn get(data: web::Data<Mutex<ShiroWallet>>) -> impl Responder {
+    let shiro_wallet = data.lock().unwrap();
+    match &shiro_wallet.wallet_data {
+        Some(wallet_data) => HttpResponse::Ok().json(WalletDir {
+            wallet_dir: wallet_data.data_dir.clone(),
+        }),
+        None => HttpResponse::BadRequest().body("wallet data has not been provided"),
     }
 }
 
