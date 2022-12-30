@@ -1,12 +1,12 @@
-use crate::wallet::WalletState;
+use crate::ShiroWallet;
 use actix_web::{put, web, HttpResponse, Responder};
 use serde::Deserialize;
 use serde::Serialize;
-use std::sync::{Arc, RwLock};
+use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
 pub struct GoOnlineParams {
-    skip_consistency_check: bool,
+    skip_contestency_check: bool,
     electrum_url: String,
     proxy_url: String,
 }
@@ -18,30 +18,31 @@ pub struct GoOnlineResult {
     proxy_url: String,
 }
 
-#[allow(clippy::await_holding_lock)]
 #[put("/wallet/go_online")]
 pub async fn put(
     params: web::Json<GoOnlineParams>,
-    arc: web::Data<Arc<RwLock<WalletState>>>,
+    data: web::Data<Mutex<ShiroWallet>>,
 ) -> impl Responder {
-    let mut wallet_state = match arc.write() {
-        Ok(wallet_state) => wallet_state,
-        Err(e) => return HttpResponse::BadRequest().body(e.to_string()),
-    };
-    match wallet_state
-        .update_online(
-            params.skip_consistency_check,
-            params.electrum_url.clone(),
-            params.proxy_url.clone(),
-        )
+    if data.lock().unwrap().wallet.is_some() {
+        match actix_web::rt::task::spawn_blocking(move || {
+            data.lock().unwrap().wallet.as_mut().unwrap().go_online(
+                params.skip_contestency_check,
+                params.electrum_url.clone(),
+                params.proxy_url.clone(),
+            )
+        })
         .await
-    {
-        Ok(online) => HttpResponse::Ok().json(GoOnlineResult {
-            id: online.id.to_string(),
-            electrum_url: online.electrum_url,
-            proxy_url: online.proxy_url,
-        }),
-        Err(e) => HttpResponse::BadRequest().body(e.to_string()),
+        .unwrap()
+        {
+            Ok(online) => HttpResponse::Ok().json(GoOnlineResult {
+                id: online.id.to_string(),
+                electrum_url: online.electrum_url.clone(),
+                proxy_url: online.proxy_url,
+            }),
+            Err(e) => HttpResponse::BadRequest().body(e.to_string()),
+        }
+    } else {
+        HttpResponse::BadRequest().body("wallet should be created first")
     }
 }
 
@@ -50,13 +51,14 @@ mod tests {
     use super::*;
 
     use actix_web::{test, web, App};
+    use rgb_lib::generate_keys;
 
     #[actix_web::test]
     async fn test_put() {
-        let wallet_state = Arc::new(RwLock::new(WalletState::new()));
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(wallet_state.clone()))
+                .app_data(web::Data::new(shiro_wallet))
                 .service(put)
                 .service(crate::wallet::put),
         )
@@ -75,7 +77,45 @@ mod tests {
         assert!(wallet_resp.status().is_success());
 
         let params = GoOnlineParams {
-            skip_consistency_check: true,
+            skip_contestency_check: true,
+            electrum_url: "127.0.0.1:50001".to_string(),
+            proxy_url: "http://proxy.rgbtools.org".to_string(),
+        };
+        let req = test::TestRequest::put()
+            .uri("/wallet/go_online")
+            .set_json(params)
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        println!("{:?}", resp);
+        assert!(resp.status().is_success());
+    }
+
+    #[actix_web::test]
+    async fn test_put_again() {
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(shiro_wallet))
+                .service(put)
+                .service(crate::wallet::put),
+        )
+        .await;
+
+        let keys = generate_keys(rgb_lib::BitcoinNetwork::Regtest);
+        let wallet_params = crate::wallet::WalletParams {
+            mnemonic: keys.mnemonic,
+            pubkey: keys.xpub,
+        };
+        let wallet_req = test::TestRequest::put()
+            .uri("/wallet")
+            .set_json(wallet_params)
+            .to_request();
+        let wallet_resp = test::call_service(&app, wallet_req).await;
+        println!("{:?}", wallet_resp);
+        assert!(wallet_resp.status().is_success());
+
+        let params = GoOnlineParams {
+            skip_contestency_check: true,
             electrum_url: "127.0.0.1:50001".to_string(),
             proxy_url: "http://proxy.rgbtools.org".to_string(),
         };

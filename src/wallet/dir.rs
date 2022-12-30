@@ -1,8 +1,8 @@
-use crate::wallet::WalletState;
+use crate::ShiroWallet;
 use actix_web::{get, web, HttpResponse, Responder};
 use serde::Deserialize;
 use serde::Serialize;
-use std::sync::{Arc, RwLock};
+use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
 pub struct WalletDir {
@@ -10,17 +10,13 @@ pub struct WalletDir {
 }
 
 #[get("/wallet/dir")]
-pub async fn get(arc: web::Data<Arc<RwLock<WalletState>>>) -> impl Responder {
-    if let Ok(wallet_state) = arc.write() {
-        if let Some(wallet_data) = &wallet_state.wallet_data {
-            HttpResponse::Ok().json(WalletDir {
-                wallet_dir: wallet_data.data_dir.clone(),
-            })
-        } else {
-            HttpResponse::BadRequest().body("")
-        }
-    } else {
-        HttpResponse::BadRequest().body("")
+pub async fn get(data: web::Data<Mutex<ShiroWallet>>) -> impl Responder {
+    let shiro_wallet = data.lock().unwrap();
+    match &shiro_wallet.wallet {
+        Some(wallet) => HttpResponse::Ok().json(WalletDir {
+            wallet_dir: wallet.get_wallet_data().data_dir,
+        }),
+        None => HttpResponse::BadRequest().body("wallet data has not been provided"),
     }
 }
 
@@ -31,10 +27,10 @@ mod tests {
 
     #[actix_web::test]
     async fn test_get_failed() {
-        let wallet_state = Arc::new(RwLock::new(WalletState::new()));
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(wallet_state.clone()))
+                .app_data(web::Data::new(shiro_wallet))
                 .service(get)
                 .service(crate::wallet::put),
         )
@@ -61,10 +57,10 @@ mod tests {
 
     #[actix_web::test]
     async fn test_get() {
-        let wallet_state = Arc::new(RwLock::new(WalletState::new()));
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(wallet_state.clone()))
+                .app_data(web::Data::new(shiro_wallet))
                 .service(get)
                 .service(crate::wallet::put),
         )

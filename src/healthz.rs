@@ -9,7 +9,7 @@ pub async fn get() -> impl Responder {
 mod tests {
     use super::*;
 
-    use actix_web::{body, body::MessageBody as _, rt::pin, test, web, App};
+    use actix_web::{test, App};
 
     #[actix_web::test]
     async fn test_healthz() {
