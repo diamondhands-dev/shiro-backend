@@ -1,5 +1,6 @@
+use crate::wallet::ShiroWallet;
 use actix_web::{web, App, HttpServer};
-use std::sync::{Arc, RwLock};
+use std::sync::Mutex;
 
 mod healthz;
 mod keys;
@@ -7,10 +8,11 @@ mod wallet;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let wallet_state = Arc::new(RwLock::new(wallet::WalletState::new()));
-    HttpServer::new(move || {
+    HttpServer::new(|| {
+        let shiro_wallet = Mutex::new(wallet::ShiroWallet::new());
+        let data = web::Data::new(shiro_wallet);
         App::new()
-            .app_data(web::Data::new(wallet_state.clone()))
+            .app_data(data)
             .service(healthz::get)
             .service(keys::post)
             .service(keys::put)
@@ -27,11 +29,21 @@ async fn main() -> std::io::Result<()> {
 mod tests {
     use super::*;
 
-    use actix_web::{body, body::MessageBody as _, rt::pin, test, web, App};
+    use actix_web::{test, web, App};
+    use serde::Deserialize;
+    use serde::Serialize;
+
+    #[derive(Serialize, Deserialize)]
+    pub struct OnlineResult {
+        pub id: String,
+        pub electrum_url: String,
+        pub proxy_url: String,
+    }
 
     #[actix_web::test]
     async fn test_root() {
-        let app = test::init_service(App::new()).await;
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
+        let app = test::init_service(App::new().app_data(web::Data::new(shiro_wallet))).await;
         let req = test::TestRequest::get().uri("/").to_request();
 
         let resp = test::call_service(&app, req).await;

@@ -1,10 +1,10 @@
-use crate::wallet::WalletState;
+use crate::wallet::ShiroWallet;
 use actix_web::{get, web, HttpResponse, Responder};
 use rgb_lib::wallet::DatabaseType;
 use rgb_lib::BitcoinNetwork;
 use serde::Deserialize;
 use serde::Serialize;
-use std::sync::{Arc, RwLock};
+use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
 pub struct WalletDataResponse {
@@ -21,34 +21,33 @@ pub struct WalletDataResponse {
 }
 
 #[get("/wallet/data")]
-pub async fn get(arc: web::Data<Arc<RwLock<WalletState>>>) -> impl Responder {
-    if let Ok(wallet_state) = arc.write() {
-        if let Some(wallet_data) = &wallet_state.wallet_data {
+pub async fn get(data: web::Data<Mutex<ShiroWallet>>) -> impl Responder {
+    let shiro_wallet = data.lock().unwrap();
+    match &shiro_wallet.wallet {
+        Some(wallet) => {
+            let wdata = wallet.get_wallet_data();
             HttpResponse::Ok().json(WalletDataResponse {
-                data_dir: wallet_data.data_dir.clone(),
-                bitcoin_network: match wallet_data.bitcoin_network {
+                data_dir: wdata.data_dir.clone(),
+                bitcoin_network: match wdata.bitcoin_network {
                     BitcoinNetwork::Mainnet => "mainnet",
                     BitcoinNetwork::Testnet => "testnet",
                     BitcoinNetwork::Regtest => "regtest",
                     BitcoinNetwork::Signet => "signet",
                 }
                 .to_string(),
-                database_type: match wallet_data.database_type {
+                database_type: match wdata.database_type {
                     DatabaseType::Sqlite => "sqlite",
                 }
                 .to_string(),
-                pubkey: wallet_data.pubkey.clone(),
-                mnemonic: if let Some(mnemonic) = &wallet_data.mnemonic {
+                pubkey: wdata.pubkey.clone(),
+                mnemonic: if let Some(mnemonic) = &wdata.mnemonic {
                     mnemonic.clone()
                 } else {
                     "".to_string()
                 },
             })
-        } else {
-            HttpResponse::BadRequest().body("")
         }
-    } else {
-        HttpResponse::BadRequest().body("")
+        None => HttpResponse::BadRequest().body("wallet doesn't be initialized"),
     }
 }
 
@@ -57,12 +56,14 @@ mod tests {
     use super::*;
     use actix_web::{http, test, App};
 
+    use crate::wallet::ShiroWallet;
+
     #[actix_web::test]
     async fn test_get_failed() {
-        let wallet_state = Arc::new(RwLock::new(WalletState::new()));
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(wallet_state.clone()))
+                .app_data(web::Data::new(shiro_wallet))
                 .service(get)
                 .service(crate::wallet::put),
         )
@@ -89,10 +90,10 @@ mod tests {
 
     #[actix_web::test]
     async fn test_get() {
-        let wallet_state = Arc::new(RwLock::new(WalletState::new()));
+        let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(wallet_state.clone()))
+                .app_data(web::Data::new(shiro_wallet))
                 .service(get)
                 .service(crate::wallet::put),
         )
