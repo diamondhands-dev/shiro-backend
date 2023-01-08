@@ -1,5 +1,5 @@
 use actix_web::{put, web, HttpResponse, Responder};
-use rgb_lib::wallet::{Wallet, WalletData};
+use rgb_lib::wallet::{Online, Wallet, WalletData};
 use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Mutex;
@@ -11,11 +11,20 @@ pub mod go_online;
 
 pub struct ShiroWallet {
     pub wallet: Option<Wallet>,
+    pub online: Option<Online>,
 }
 
 impl ShiroWallet {
     pub fn new() -> ShiroWallet {
-        ShiroWallet { wallet: None }
+        ShiroWallet {
+            wallet: None,
+            online: None,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn get_online(&mut self) -> Option<Online> {
+        self.online.clone()
     }
 }
 
