@@ -6,17 +6,28 @@ use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
 pub struct GoOnlineParams {
-    skip_contestency_check: bool,
+    skip_consistency_check: bool,
     electrum_url: String,
     proxy_url: String,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct GoOnlineResult {
-    id: String,
-    electrum_url: String,
-    proxy_url: String,
+impl GoOnlineParams {
+    #[allow(dead_code)]
+    pub fn new(
+        skip_consistency_check: bool,
+        electrum_url: String,
+        proxy_url: String,
+    ) -> GoOnlineParams {
+        GoOnlineParams {
+            skip_consistency_check,
+            electrum_url,
+            proxy_url,
+        }
+    }
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct GoOnlineResult {}
 
 #[put("/wallet/go_online")]
 pub async fn put(
@@ -25,20 +36,17 @@ pub async fn put(
 ) -> impl Responder {
     if data.lock().unwrap().wallet.is_some() {
         match actix_web::rt::task::spawn_blocking(move || {
-            data.lock().unwrap().wallet.as_mut().unwrap().go_online(
-                params.skip_contestency_check,
+            let mut shiro_wallet = data.lock().unwrap();
+            let result = shiro_wallet.wallet.as_mut().unwrap().go_online(
+                params.skip_consistency_check,
                 params.electrum_url.clone(),
                 params.proxy_url.clone(),
-            )
+            );
+            shiro_wallet.online = Some(result.unwrap())
         })
         .await
-        .unwrap()
         {
-            Ok(online) => HttpResponse::Ok().json(GoOnlineResult {
-                id: online.id.to_string(),
-                electrum_url: online.electrum_url.clone(),
-                proxy_url: online.proxy_url,
-            }),
+            Ok(_) => HttpResponse::Ok().json(GoOnlineResult {}),
             Err(e) => HttpResponse::BadRequest().body(e.to_string()),
         }
     } else {
@@ -77,7 +85,7 @@ mod tests {
         assert!(wallet_resp.status().is_success());
 
         let params = GoOnlineParams {
-            skip_contestency_check: true,
+            skip_consistency_check: true,
             electrum_url: "127.0.0.1:50001".to_string(),
             proxy_url: "http://proxy.rgbtools.org".to_string(),
         };
@@ -115,7 +123,7 @@ mod tests {
         assert!(wallet_resp.status().is_success());
 
         let params = GoOnlineParams {
-            skip_contestency_check: true,
+            skip_consistency_check: true,
             electrum_url: "127.0.0.1:50001".to_string(),
             proxy_url: "http://proxy.rgbtools.org".to_string(),
         };
