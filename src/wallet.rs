@@ -8,6 +8,7 @@ pub mod address;
 pub mod data;
 pub mod dir;
 pub mod go_online;
+pub mod unspents;
 
 pub struct ShiroWallet {
     pub wallet: Option<Wallet>,
