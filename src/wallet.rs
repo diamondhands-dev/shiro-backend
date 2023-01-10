@@ -5,6 +5,7 @@ use serde::Serialize;
 use std::sync::Mutex;
 
 pub mod address;
+pub mod assets;
 pub mod data;
 pub mod dir;
 pub mod go_online;
