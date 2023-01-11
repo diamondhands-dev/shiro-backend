@@ -1,4 +1,4 @@
-use crate::ShiroWallet;
+use crate::{wallet::Balance, ShiroWallet};
 use actix_web::{get, web, HttpResponse, Responder};
 use rgb_lib::wallet::AssetType;
 use serde::Deserialize;
@@ -8,23 +8,6 @@ use std::sync::Mutex;
 #[derive(Deserialize, Serialize)]
 pub struct AssetsParams {
     filter_asset_types: Vec<AssetType>,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct Balance {
-    settled: String,
-    future: String,
-    spendable: String,
-}
-
-impl From<rgb_lib::wallet::Balance> for Balance {
-    fn from(origin: rgb_lib::wallet::Balance) -> Balance {
-        Balance {
-            settled: origin.settled.to_string(),
-            future: origin.future.to_string(),
-            spendable: origin.spendable.to_string(),
-        }
-    }
 }
 
 #[derive(Deserialize, Serialize)]

@@ -9,6 +9,7 @@ pub mod assets;
 pub mod data;
 pub mod dir;
 pub mod go_online;
+pub mod issue;
 pub mod unspents;
 
 pub struct ShiroWallet {
@@ -34,6 +35,23 @@ impl ShiroWallet {
 pub struct WalletParams {
     mnemonic: String,
     pubkey: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct Balance {
+    settled: String,
+    future: String,
+    spendable: String,
+}
+
+impl From<rgb_lib::wallet::Balance> for Balance {
+    fn from(origin: rgb_lib::wallet::Balance) -> Balance {
+        Balance {
+            settled: origin.settled.to_string(),
+            future: origin.future.to_string(),
+            spendable: origin.spendable.to_string(),
+        }
+    }
 }
 
 #[allow(clippy::await_holding_lock)]
