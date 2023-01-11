@@ -8,6 +8,7 @@ pub mod address;
 pub mod assets;
 pub mod data;
 pub mod dir;
+pub mod drain_to;
 pub mod go_online;
 pub mod issue;
 pub mod unspents;
