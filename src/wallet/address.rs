@@ -6,7 +6,7 @@ use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
 pub struct AddressResult {
-    new_address: String,
+    pub(crate) new_address: String,
 }
 
 #[allow(clippy::await_holding_lock)]
