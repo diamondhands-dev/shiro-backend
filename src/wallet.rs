@@ -12,6 +12,7 @@ pub mod drain_to;
 pub mod go_online;
 pub mod issue;
 pub mod unspents;
+pub mod utxos;
 
 pub struct ShiroWallet {
     pub wallet: Option<Wallet>,
@@ -91,6 +92,36 @@ mod tests {
     use super::*;
 
     use actix_web::{http, test, web, App};
+    use std::process::{Command, Stdio};
+
+    fn _bitcoin_cli() -> [String; 9] {
+        [
+            "-f".to_string(),
+            "test-mocks/docker-compose.yml".to_string(),
+            "exec".to_string(),
+            "-T".to_string(),
+            "-u".to_string(),
+            "blits".to_string(),
+            "bitcoind".to_string(),
+            "bitcoin-cli".to_string(),
+            "-regtest".to_string(),
+        ]
+    }
+
+    pub fn fund_wallet(address: String) {
+        let status = Command::new("docker-compose")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .args(_bitcoin_cli())
+            .arg("-rpcwallet=miner")
+            .arg("sendtoaddress")
+            .arg(address)
+            .arg("1")
+            .status()
+            .expect("failed to fund wallet");
+        assert!(status.success());
+    }
 
     #[actix_web::test]
     async fn test_put_failed() {
