@@ -9,7 +9,7 @@ pub struct Rgb20Params {
     pub ticker: String,
     pub name: String,
     pub presision: u8,
-    amounts: Vec<String>,
+    pub amounts: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]
