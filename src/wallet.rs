@@ -123,6 +123,21 @@ mod tests {
         assert!(status.success());
     }
 
+    pub fn mine(address: String) {
+        let status = Command::new("docker-compose")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .args(_bitcoin_cli())
+            .arg("-rpcwallet=miner")
+            .arg("sendtoaddress")
+            .arg(address)
+            .arg("1")
+            .status()
+            .expect("failed to fund wallet");
+        assert!(status.success());
+    }
+
     #[actix_web::test]
     async fn test_put_failed() {
         let shiro_wallet = Mutex::new(ShiroWallet::new());

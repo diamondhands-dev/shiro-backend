@@ -71,18 +71,20 @@ pub async fn put(
 mod tests {
     use super::*;
 
-    use crate::wallet::go_online::GoOnlineParams;
+    use crate::wallet::{address::AddressResult, go_online::GoOnlineParams, tests::{fund_wallet, mine}, utxos::UtxosParams};
     use actix_web::{http, test, web, App};
     use rgb_lib::generate_keys;
 
     #[actix_web::test]
-    async fn test_put_failed() {
+    async fn test_put() {
         let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(shiro_wallet))
                 .service(put)
                 .service(crate::wallet::put)
+                .service(crate::wallet::address::get)
+                .service(crate::wallet::utxos::put)
                 .service(crate::wallet::go_online::put),
         )
         .await;
@@ -101,6 +103,15 @@ mod tests {
             println!("{:?}", resp);
             assert!(resp.status().is_success());
         }
+        let address: AddressResult = {
+            let req = test::TestRequest::get().uri("/wallet/address").to_request();
+            let resp = test::call_service(&app, req).await;
+            println!("{:?}", resp);
+            assert!(resp.status().is_success());
+            test::read_body_json(resp).await
+        };
+        fund_wallet(address.new_address.clone());
+        mine(address.new_address.clone());
         {
             let params = GoOnlineParams::new(
                 true,
@@ -116,6 +127,21 @@ mod tests {
             assert!(resp.status().is_success());
         }
         {
+            let params = UtxosParams::new(
+                false,
+                Some(1),
+                None,
+            );
+            let req = test::TestRequest::put()
+                .uri("/wallet/utxos")
+                .set_json(params)
+                .to_request();
+            let resp = test::call_service(&app, req).await;
+            println!("{:?}", resp);
+            assert!(resp.status().is_success());
+        }
+        //mine(address.new_address);
+        {
             let params = Rgb20Params {
                 ticker: "FakeMONA".to_string(),
                 name: "Fake Monacoin".to_string(),
@@ -128,11 +154,7 @@ mod tests {
                 .to_request();
             let resp = test::call_service(&app, req).await;
             println!("{:?}", resp);
-            assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+            assert!(resp.status().is_success());
         }
     }
-
-    #[actix_web::test]
-    #[ignore]
-    async fn test_put_success() {}
 }

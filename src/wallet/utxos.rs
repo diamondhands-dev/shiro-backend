@@ -11,6 +11,19 @@ pub struct UtxosParams {
     size: Option<u32>,
 }
 
+impl UtxosParams {
+    pub fn new(
+    up_to: bool,
+    num: Option<u8>,
+    size: Option<u32>) -> UtxosParams {
+        UtxosParams {
+            up_to,
+            num,
+            size,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct UtxosResult {
     created_utxos: u8,
