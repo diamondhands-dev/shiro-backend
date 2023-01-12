@@ -55,6 +55,12 @@ mod tests {
     use actix_web::{test, web, App};
     use rgb_lib::generate_keys;
 
+    impl UtxosParams {
+        pub fn new(up_to: bool, num: Option<u8>, size: Option<u32>) -> UtxosParams {
+            UtxosParams { up_to, num, size }
+        }
+    }
+
     #[actix_web::test]
     async fn test_put() {
         let shiro_wallet = Mutex::new(ShiroWallet::new());
