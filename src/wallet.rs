@@ -123,18 +123,17 @@ mod tests {
         assert!(status.success());
     }
 
-    pub fn mine(address: String) {
+    pub fn mine() {
         let status = Command::new("docker-compose")
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .args(_bitcoin_cli())
             .arg("-rpcwallet=miner")
-            .arg("sendtoaddress")
-            .arg(address)
+            .arg("-generate")
             .arg("1")
             .status()
-            .expect("failed to fund wallet");
+            .expect("failed to mine");
         assert!(status.success());
     }
 

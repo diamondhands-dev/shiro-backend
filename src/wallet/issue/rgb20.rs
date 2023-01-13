@@ -111,7 +111,7 @@ mod tests {
             test::read_body_json(resp).await
         };
         fund_wallet(address.new_address.clone());
-        mine(address.new_address.clone());
+        mine();
         {
             let params = GoOnlineParams::new(
                 true,
@@ -143,7 +143,7 @@ mod tests {
         //mine(address.new_address);
         {
             let params = Rgb20Params {
-                ticker: "FakeMONA".to_string(),
+                ticker: "MONA".to_string(),
                 name: "Fake Monacoin".to_string(),
                 presision: 8,
                 amounts: vec![100.to_string()],
