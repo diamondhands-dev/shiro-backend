@@ -7,6 +7,7 @@ use std::sync::Mutex;
 pub mod address;
 pub mod asset_balance;
 pub mod assets;
+pub mod blind;
 pub mod data;
 pub mod dir;
 pub mod drain_to;
