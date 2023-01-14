@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 actix-web = "4.2.1"
 clap = { version = "4.0.15", features = ["derive", "env"] }
+rand = "0.8.5"
 rgb-lib = "0.1.6"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
