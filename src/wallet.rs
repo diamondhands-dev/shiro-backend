@@ -5,6 +5,7 @@ use serde::Serialize;
 use std::sync::Mutex;
 
 pub mod address;
+pub mod asset_balance;
 pub mod assets;
 pub mod data;
 pub mod dir;
@@ -94,6 +95,22 @@ mod tests {
 
     use actix_web::{http, test, web, App};
     use std::process::{Command, Stdio};
+
+    extern crate rand;
+    use rand::seq::SliceRandom;
+
+    pub fn gen_fake_ticker() -> String {
+        const BASE_STR: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        let mut rng = &mut rand::thread_rng();
+        String::from_utf8(
+            BASE_STR
+                .as_bytes()
+                .choose_multiple(&mut rng, 8)
+                .cloned()
+                .collect(),
+        )
+        .unwrap()
+    }
 
     fn _bitcoin_cli() -> [String; 9] {
         [

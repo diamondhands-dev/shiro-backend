@@ -1,64 +1,17 @@
-use crate::ShiroWallet;
+use crate::{wallet::Balance, ShiroWallet};
 use actix_web::{get, web, HttpResponse, Responder};
-use rgb_lib::{wallet::Outpoint, TransferStatus};
 use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
-pub struct TransferParams {
+pub struct AssetBalanceParams {
     asset_id: String,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Transfer {
-    idx: String,
-    created_at: String,
-    updated_at: String,
-    status: String,
-    amount: String,
-    incoming: bool,
-    txid: Option<String>,
-    blinded_utxo: Option<String>,
-    unblinded_utxo: Option<Outpoint>,
-    change_utxo: Option<Outpoint>,
-    blinding_secret: Option<String>,
-    expiration: Option<String>,
-}
-
-impl From<rgb_lib::wallet::Transfer> for Transfer {
-    fn from(x: rgb_lib::wallet::Transfer) -> Transfer {
-        Transfer {
-            idx: x.idx.to_string(),
-            created_at: x.created_at.to_string(),
-            updated_at: x.updated_at.to_string(),
-            status: match x.status {
-                TransferStatus::WaitingCounterparty => "WaitingCounterparty",
-                TransferStatus::WaitingConfirmations => "WaitingConfirmations",
-                TransferStatus::Settled => "Settled",
-                TransferStatus::Failed => "Failed",
-            }
-            .to_string(),
-            amount: x.amount.to_string(),
-            incoming: x.incoming,
-            txid: x.txid,
-            blinded_utxo: x.blinded_utxo,
-            unblinded_utxo: x.unblinded_utxo,
-            change_utxo: x.change_utxo,
-            blinding_secret: x.blinding_secret.map(|n| n.to_string()),
-            expiration: x.expiration.map(|n| n.to_string()),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct TransferResult {
-    transfers: Vec<Transfer>,
-}
-
-#[get("/wallet/transfers")]
+#[get("/wallet/asset_balance")]
 pub async fn get(
-    params: web::Json<TransferParams>,
+    params: web::Json<AssetBalanceParams>,
     data: web::Data<Mutex<ShiroWallet>>,
 ) -> impl Responder {
     if data.lock().unwrap().wallet.is_some() {
@@ -68,17 +21,12 @@ pub async fn get(
                 .wallet
                 .as_mut()
                 .unwrap()
-                .list_transfers(params.asset_id.clone())
+                .get_asset_balance(params.asset_id.clone())
         })
         .await
         .unwrap()
         {
-            Ok(transfers) => HttpResponse::Ok().json(
-                transfers
-                    .into_iter()
-                    .map(Transfer::from)
-                    .collect::<Vec<Transfer>>(),
-            ),
+            Ok(balance) => HttpResponse::Ok().json(Balance::from(balance)),
             Err(e) => HttpResponse::BadRequest().body(e.to_string()),
         }
     } else {
@@ -94,7 +42,7 @@ mod tests {
         address::AddressResult,
         go_online::GoOnlineParams,
         issue::rgb20::{Rgb20Params, Rgb20Result},
-        tests::fund_wallet,
+        tests::{fund_wallet, gen_fake_ticker},
         utxos::UtxosParams,
     };
     use actix_web::{test, web, App};
@@ -136,7 +84,7 @@ mod tests {
             assert!(resp.status().is_success());
             test::read_body_json(resp).await
         };
-        fund_wallet(address.new_address);
+        fund_wallet(address.new_address.clone());
         {
             let params = GoOnlineParams::new(
                 true,
@@ -152,7 +100,7 @@ mod tests {
             assert!(resp.status().is_success());
         }
         {
-            let params = UtxosParams::new(true, Some(1), None);
+            let params = UtxosParams::new(false, Some(1), None);
             let req = test::TestRequest::put()
                 .uri("/wallet/utxos")
                 .set_json(params)
@@ -163,7 +111,7 @@ mod tests {
         }
         let rgb20_result: Rgb20Result = {
             let params = Rgb20Params {
-                ticker: "FAKEMONA".to_string(),
+                ticker: gen_fake_ticker(),
                 name: "Fake Monacoin".to_string(),
                 presision: 8,
                 amounts: vec![100.to_string()],
@@ -174,15 +122,16 @@ mod tests {
                 .to_request();
             test::call_and_read_body_json(&app, req).await
         };
-        let params = TransferParams {
+        let params = AssetBalanceParams {
             asset_id: rgb20_result.asset_id,
         };
         let req = test::TestRequest::get()
-            .uri("/wallet/transfers")
+            .uri("/wallet/asset_balance")
             .set_json(params)
             .to_request();
-        let resp = test::call_service(&app, req).await;
-        println!("{:?}", resp);
-        assert!(resp.status().is_success());
+        let asset_balance_result: Balance = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(asset_balance_result.settled, "100");
+        assert_eq!(asset_balance_result.future, "100");
+        assert_eq!(asset_balance_result.spendable, "100");
     }
 }
