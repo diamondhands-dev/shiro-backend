@@ -4,11 +4,24 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Mutex;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BlindParams {
     asset_id: Option<String>,
     amount: Option<String>,
     duration_seconds: Option<u32>,
+}
+
+impl BlindParams {
+    pub fn new(
+    asset_id: Option<String>,
+    amount: Option<String>,
+    duration_seconds: Option<u32>) -> BlindParams {
+BlindParams {
+    asset_id,
+    amount,
+    duration_seconds,
+        }
+    }
 }
 
 pub struct BlindParamsForLib {
@@ -27,12 +40,18 @@ impl From<BlindParams> for BlindParamsForLib {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct BlindData {
     invoice: String,
     blinded_utxo: String,
     blinding_secret: String,
     expiration_timestamp: Option<String>,
+}
+
+impl BlindData {
+    pub fn get_blinded_utxo(&self) -> String {
+        self.blinded_utxo.clone()
+    }
 }
 
 impl From<rgb_lib::wallet::BlindData> for BlindData {
@@ -143,7 +162,7 @@ mod tests {
                 .set_json(params)
                 .to_request();
             let resp = test::call_service(&app, req).await;
-            println!("{:?}", resp);
+            println!("{:#?}", resp);
             assert!(resp.status().is_success());
         }
         let rgb20_result: Rgb20Result = {
@@ -159,6 +178,7 @@ mod tests {
                 .to_request();
             test::call_and_read_body_json(&app, req).await
         };
+        println!("{:#?}", rgb20_result);
         let params = BlindParams {
             asset_id: Some(rgb20_result.asset_id),
             amount: Some("10".to_string()),

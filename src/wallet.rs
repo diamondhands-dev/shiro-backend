@@ -44,7 +44,7 @@ pub struct WalletParams {
     pubkey: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Balance {
     settled: String,
     future: String,
