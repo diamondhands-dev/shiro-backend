@@ -13,6 +13,7 @@ pub mod dir;
 pub mod drain_to;
 pub mod go_online;
 pub mod issue;
+pub mod refresh;
 pub mod transfers;
 pub mod unspents;
 pub mod utxos;
