@@ -16,11 +16,23 @@ async fn main() -> std::io::Result<()> {
             .service(healthz::get)
             .service(keys::post)
             .service(keys::put)
-            .service(wallet::put)
+            .service(wallet::address::get)
+            .service(wallet::asset_balance::get)
+            .service(wallet::assets::get)
+            .service(wallet::blind::put)
             .service(wallet::data::get)
             .service(wallet::dir::get)
+            .service(wallet::drain_to::put)
+            .service(wallet::go_online::put)
+            .service(wallet::issue::rgb20::put)
+            .service(wallet::refresh::post)
+            .service(wallet::send::post)
+            .service(wallet::put)
+            .service(wallet::transfers::get)
+            .service(wallet::unspents::get)
+            .service(wallet::utxos::put)
     })
-    .bind("127.0.0.1:8080")?
+    .bind("0.0.0.0:8080")?
     .run()
     .await
 }

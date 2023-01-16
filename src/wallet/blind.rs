@@ -86,7 +86,7 @@ mod tests {
     use rgb_lib::generate_keys;
 
     #[actix_web::test]
-    async fn test_get() {
+    async fn test_put() {
         let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
