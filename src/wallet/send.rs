@@ -1,4 +1,4 @@
-use crate::{wallet::blind::BlindData, ShiroWallet};
+use crate::ShiroWallet;
 use actix_web::{post, web, HttpResponse, Responder};
 use serde::Deserialize;
 use serde::Serialize;
@@ -82,14 +82,38 @@ mod tests {
 
     use crate::wallet::{
         address::AddressResult,
-        blind::BlindParams,
         go_online::GoOnlineParams,
         issue::rgb20::{Rgb20Params, Rgb20Result},
         tests::fund_wallet,
         utxos::UtxosParams,
     };
     use actix_web::{test, web, App};
-    use rgb_lib::generate_keys;
+    use rgb_lib::{generate_keys, wallet::{Wallet, WalletData}};
+
+    async fn get_blinded_utxo() -> String {
+        let keys = generate_keys(rgb_lib::BitcoinNetwork::Regtest);
+        let base_data = shiro_backend::opts::get_wallet_data();
+        let wallet_data = WalletData {
+            data_dir: base_data.data_dir,
+            bitcoin_network:base_data.bitcoin_network,
+            database_type: base_data.database_type,
+            pubkey: keys.xpub,
+            mnemonic: Some(keys.mnemonic),
+        };
+        actix_web::rt::task::spawn_blocking(move || {
+            let mut wallet = Wallet::new(wallet_data).unwrap();
+            let address = wallet.get_address();
+            fund_wallet(address);
+            let online = wallet.go_online(true,
+                    "127.0.0.1:50001".to_string(),
+                    "http://proxy.rgbtools.org".to_string()).unwrap();
+            wallet.create_utxos(online, true, Some(1), None).unwrap();
+            let blind_data = wallet.blind(None, None, None).unwrap();
+            //let blind_data = wallet.blind(Some(asset_id), Some(10), None).unwrap();
+            blind_data.blinded_utxo
+        }).await.unwrap()
+    }
+
 
     #[actix_web::test]
     async fn test_post() {
@@ -168,21 +192,7 @@ mod tests {
             test::call_and_read_body_json(&app, req).await
         };
             println!("{:#?}", rgb20_result);
-        let blinded_utxo = {
-            let params = BlindParams::new(
-                Some(rgb20_result.asset_id.clone()),
-                Some("10".to_string()),
-                Some(10),
-            );
-            let req = test::TestRequest::put()
-                .uri("/wallet/blind")
-                .set_json(params)
-                .to_request();
-            let res: BlindData = test::call_and_read_body_json(&app, req).await;
-            let a =res.get_blinded_utxo();
-            println!("{:#?}", res);
-            a
-        };
+        let blinded_utxo = get_blinded_utxo().await;
         let mut recipient_map = HashMap::new();
         recipient_map.insert(rgb20_result.asset_id, vec!(Recipient { blinded_utxo, amount: "10".to_string()}));
         let params = SendParams {

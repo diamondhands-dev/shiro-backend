@@ -11,19 +11,6 @@ pub struct BlindParams {
     duration_seconds: Option<u32>,
 }
 
-impl BlindParams {
-    pub fn new(
-    asset_id: Option<String>,
-    amount: Option<String>,
-    duration_seconds: Option<u32>) -> BlindParams {
-BlindParams {
-    asset_id,
-    amount,
-    duration_seconds,
-        }
-    }
-}
-
 pub struct BlindParamsForLib {
     asset_id: Option<String>,
     amount: Option<u64>,
@@ -46,12 +33,6 @@ pub struct BlindData {
     blinded_utxo: String,
     blinding_secret: String,
     expiration_timestamp: Option<String>,
-}
-
-impl BlindData {
-    pub fn get_blinded_utxo(&self) -> String {
-        self.blinded_utxo.clone()
-    }
 }
 
 impl From<rgb_lib::wallet::BlindData> for BlindData {
