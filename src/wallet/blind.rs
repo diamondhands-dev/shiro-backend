@@ -9,12 +9,14 @@ pub struct BlindParams {
     asset_id: Option<String>,
     amount: Option<String>,
     duration_seconds: Option<u32>,
+    consignment_endpoints: Vec<String>,
 }
 
 pub struct BlindParamsForLib {
     asset_id: Option<String>,
     amount: Option<u64>,
     duration_seconds: Option<u32>,
+    consignment_endpoints: Vec<String>,
 }
 
 impl From<BlindParams> for BlindParamsForLib {
@@ -23,6 +25,7 @@ impl From<BlindParams> for BlindParamsForLib {
             asset_id: x.asset_id,
             amount: x.amount.map(|str| str.parse::<u64>().unwrap()),
             duration_seconds: x.duration_seconds,
+            consignment_endpoints: x.consignment_endpoints,
         }
     }
 }
@@ -58,6 +61,7 @@ pub async fn put(
                 params.asset_id.clone(),
                 params.amount,
                 params.duration_seconds,
+                params.consignment_endpoints,
             )
         })
         .await
@@ -75,6 +79,7 @@ pub async fn put(
 mod tests {
     use super::*;
 
+    use crate::tests::PROXY_ENDPOINT;
     use crate::wallet::{
         address::AddressResult,
         go_online::GoOnlineParams,
@@ -123,11 +128,7 @@ mod tests {
         };
         fund_wallet(address.new_address);
         {
-            let params = GoOnlineParams::new(
-                true,
-                "127.0.0.1:50001".to_string(),
-                "http://proxy.rgbtools.org".to_string(),
-            );
+            let params = GoOnlineParams::new(true, "127.0.0.1:50001".to_string());
             let req = test::TestRequest::put()
                 .uri("/wallet/go_online")
                 .set_json(params)
@@ -137,7 +138,7 @@ mod tests {
             assert!(resp.status().is_success());
         }
         {
-            let params = UtxosParams::new(true, Some(1), None);
+            let params = UtxosParams::new(true, Some(1), None, 1.0);
             let req = test::TestRequest::put()
                 .uri("/wallet/utxos")
                 .set_json(params)
@@ -163,6 +164,7 @@ mod tests {
             asset_id: Some(rgb20_result.asset_id),
             amount: Some("10".to_string()),
             duration_seconds: Some(10),
+            consignment_endpoints: vec![PROXY_ENDPOINT.clone()],
         };
         let req = test::TestRequest::put()
             .uri("/wallet/blind")

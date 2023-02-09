@@ -9,6 +9,7 @@ pub struct UtxosParams {
     up_to: bool,
     num: Option<u8>,
     size: Option<u32>,
+    fee_rate: f32,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -31,6 +32,7 @@ pub async fn put(
                     params.up_to,
                     params.num,
                     params.size,
+                    params.fee_rate,
                 )
             })
             .await
@@ -56,8 +58,13 @@ mod tests {
     use rgb_lib::generate_keys;
 
     impl UtxosParams {
-        pub fn new(up_to: bool, num: Option<u8>, size: Option<u32>) -> UtxosParams {
-            UtxosParams { up_to, num, size }
+        pub fn new(up_to: bool, num: Option<u8>, size: Option<u32>, fee_rate: f32) -> UtxosParams {
+            UtxosParams {
+                up_to,
+                num,
+                size,
+                fee_rate,
+            }
         }
     }
 
@@ -97,11 +104,7 @@ mod tests {
         };
         fund_wallet(address.new_address.clone());
         {
-            let params = GoOnlineParams::new(
-                true,
-                "127.0.0.1:50001".to_string(),
-                "http://proxy.rgbtools.org".to_string(),
-            );
+            let params = GoOnlineParams::new(true, "127.0.0.1:50001".to_string());
             let req = test::TestRequest::put()
                 .uri("/wallet/go_online")
                 .set_json(params)
@@ -114,6 +117,7 @@ mod tests {
             up_to: true,
             num: Some(1),
             size: None,
+            fee_rate: 1.0,
         };
         let req = test::TestRequest::put()
             .uri("/wallet/utxos")

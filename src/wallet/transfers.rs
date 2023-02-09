@@ -1,6 +1,9 @@
 use crate::ShiroWallet;
 use actix_web::{get, web, HttpResponse, Responder};
-use rgb_lib::{wallet::Outpoint, TransferStatus};
+use rgb_lib::{
+    wallet::{Outpoint, TransferKind},
+    TransferStatus,
+};
 use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Mutex;
@@ -17,7 +20,7 @@ pub struct Transfer {
     updated_at: String,
     status: String,
     amount: String,
-    incoming: bool,
+    kind: String,
     txid: Option<String>,
     blinded_utxo: Option<String>,
     unblinded_utxo: Option<Outpoint>,
@@ -40,7 +43,12 @@ impl From<rgb_lib::wallet::Transfer> for Transfer {
             }
             .to_string(),
             amount: x.amount.to_string(),
-            incoming: x.incoming,
+            kind: match x.kind {
+                TransferKind::Issuance => "issuance",
+                TransferKind::Receive => "receive",
+                TransferKind::Send => "send",
+            }
+            .to_string(),
             txid: x.txid,
             blinded_utxo: x.blinded_utxo,
             unblinded_utxo: x.unblinded_utxo,
@@ -138,11 +146,7 @@ mod tests {
         };
         fund_wallet(address.new_address);
         {
-            let params = GoOnlineParams::new(
-                true,
-                "127.0.0.1:50001".to_string(),
-                "http://proxy.rgbtools.org".to_string(),
-            );
+            let params = GoOnlineParams::new(true, "127.0.0.1:50001".to_string());
             let req = test::TestRequest::put()
                 .uri("/wallet/go_online")
                 .set_json(params)
@@ -152,7 +156,7 @@ mod tests {
             assert!(resp.status().is_success());
         }
         {
-            let params = UtxosParams::new(true, Some(1), None);
+            let params = UtxosParams::new(true, Some(1), None, 1.0);
             let req = test::TestRequest::put()
                 .uri("/wallet/utxos")
                 .set_json(params)

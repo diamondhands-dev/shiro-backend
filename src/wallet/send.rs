@@ -9,12 +9,14 @@ use std::sync::Mutex;
 pub struct SendParams {
     recipient_map: HashMap<String, Vec<Recipient>>,
     donation: bool,
+    fee_rate: f32,
 }
 
 #[derive(Serialize, Deserialize)]
 struct Recipient {
     blinded_utxo: String,
     amount: String,
+    consignment_endpoints: Vec<String>,
 }
 
 impl Recipient {
@@ -22,6 +24,7 @@ impl Recipient {
         rgb_lib::wallet::Recipient {
             blinded_utxo: self.blinded_utxo.clone(),
             amount: str::parse::<u64>(&self.amount).unwrap(),
+            consignment_endpoints: self.consignment_endpoints.clone(),
         }
     }
 }
@@ -31,6 +34,7 @@ impl From<rgb_lib::wallet::Recipient> for Recipient {
         Recipient {
             blinded_utxo: x.blinded_utxo,
             amount: x.amount.to_string(),
+            consignment_endpoints: x.consignment_endpoints,
         }
     }
 }
@@ -63,11 +67,12 @@ pub async fn post(
                         )
                     })
                     .collect::<HashMap<_, _>>();
-                shiro_wallet
-                    .wallet
-                    .as_mut()
-                    .unwrap()
-                    .send(online, recipient_map, params.donation)
+                shiro_wallet.wallet.as_mut().unwrap().send(
+                    online,
+                    recipient_map,
+                    params.donation,
+                    params.fee_rate,
+                )
             })
             .await
             .unwrap()
@@ -87,6 +92,7 @@ pub async fn post(
 mod tests {
     use super::*;
 
+    use crate::tests::PROXY_ENDPOINT;
     use crate::wallet::{
         address::AddressResult,
         go_online::GoOnlineParams,
@@ -115,14 +121,14 @@ mod tests {
             let address = wallet.get_address();
             fund_wallet(address);
             let online = wallet
-                .go_online(
-                    true,
-                    "127.0.0.1:50001".to_string(),
-                    "http://proxy.rgbtools.org".to_string(),
-                )
+                .go_online(true, "127.0.0.1:50001".to_string())
                 .unwrap();
-            wallet.create_utxos(online, true, Some(1), None).unwrap();
-            let blind_data = wallet.blind(None, None, None).unwrap();
+            wallet
+                .create_utxos(online, true, Some(1), None, 1.0)
+                .unwrap();
+            let blind_data = wallet
+                .blind(None, None, None, vec![PROXY_ENDPOINT.clone()])
+                .unwrap();
             //let blind_data = wallet.blind(Some(asset_id), Some(10), None).unwrap();
             blind_data.blinded_utxo
         })
@@ -170,11 +176,7 @@ mod tests {
         fund_wallet(address.new_address.clone());
         fund_wallet(address.new_address);
         {
-            let params = GoOnlineParams::new(
-                true,
-                "127.0.0.1:50001".to_string(),
-                "http://proxy.rgbtools.org".to_string(),
-            );
+            let params = GoOnlineParams::new(true, "127.0.0.1:50001".to_string());
             let req = test::TestRequest::put()
                 .uri("/wallet/go_online")
                 .set_json(params)
@@ -184,7 +186,7 @@ mod tests {
             assert!(resp.status().is_success());
         }
         {
-            let params = UtxosParams::new(true, Some(2), None);
+            let params = UtxosParams::new(true, Some(2), None, 1.0);
             let req = test::TestRequest::put()
                 .uri("/wallet/utxos")
                 .set_json(params)
@@ -212,11 +214,13 @@ mod tests {
             vec![Recipient {
                 blinded_utxo,
                 amount: "10".to_string(),
+                consignment_endpoints: vec![PROXY_ENDPOINT.clone()],
             }],
         );
         let params = SendParams {
             recipient_map,
             donation: false,
+            fee_rate: 1.0,
         };
         let req = test::TestRequest::post()
             .uri("/wallet/send")

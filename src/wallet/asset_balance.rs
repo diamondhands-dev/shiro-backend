@@ -86,11 +86,7 @@ mod tests {
         };
         fund_wallet(address.new_address.clone());
         {
-            let params = GoOnlineParams::new(
-                true,
-                "127.0.0.1:50001".to_string(),
-                "http://proxy.rgbtools.org".to_string(),
-            );
+            let params = GoOnlineParams::new(true, "127.0.0.1:50001".to_string());
             let req = test::TestRequest::put()
                 .uri("/wallet/go_online")
                 .set_json(params)
@@ -100,7 +96,7 @@ mod tests {
             assert!(resp.status().is_success());
         }
         {
-            let params = UtxosParams::new(false, Some(1), None);
+            let params = UtxosParams::new(false, Some(1), None, 1.0);
             let req = test::TestRequest::put()
                 .uri("/wallet/utxos")
                 .set_json(params)

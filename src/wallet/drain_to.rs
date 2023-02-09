@@ -8,6 +8,7 @@ use std::sync::Mutex;
 pub struct DrainToParams {
     address: String,
     destroy_assets: bool,
+    fee_rate: f32,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -29,6 +30,7 @@ pub async fn put(
                     online,
                     params.address.clone(),
                     params.destroy_assets,
+                    params.fee_rate,
                 )
             })
             .await
@@ -81,11 +83,7 @@ mod tests {
             assert!(wallet_resp.status().is_success());
         }
         {
-            let params = GoOnlineParams::new(
-                true,
-                "127.0.0.1:50001".to_string(),
-                "http://proxy.rgbtools.org".to_string(),
-            );
+            let params = GoOnlineParams::new(true, "127.0.0.1:50001".to_string());
             let req = test::TestRequest::put()
                 .uri("/wallet/go_online")
                 .set_json(params)
@@ -105,6 +103,7 @@ mod tests {
             let params = DrainToParams {
                 address: address.new_address,
                 destroy_assets: false,
+                fee_rate: 0.0,
             };
             let req = test::TestRequest::put()
                 .uri("/wallet/drain_to")
