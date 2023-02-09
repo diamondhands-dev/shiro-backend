@@ -8,20 +8,14 @@ use std::sync::Mutex;
 pub struct GoOnlineParams {
     skip_consistency_check: bool,
     electrum_url: String,
-    proxy_url: String,
 }
 
 impl GoOnlineParams {
     #[allow(dead_code)]
-    pub fn new(
-        skip_consistency_check: bool,
-        electrum_url: String,
-        proxy_url: String,
-    ) -> GoOnlineParams {
+    pub fn new(skip_consistency_check: bool, electrum_url: String) -> GoOnlineParams {
         GoOnlineParams {
             skip_consistency_check,
             electrum_url,
-            proxy_url,
         }
     }
 }
@@ -37,11 +31,11 @@ pub async fn put(
     if data.lock().unwrap().wallet.is_some() {
         match actix_web::rt::task::spawn_blocking(move || {
             let mut shiro_wallet = data.lock().unwrap();
-            let result = shiro_wallet.wallet.as_mut().unwrap().go_online(
-                params.skip_consistency_check,
-                params.electrum_url.clone(),
-                params.proxy_url.clone(),
-            );
+            let result = shiro_wallet
+                .wallet
+                .as_mut()
+                .unwrap()
+                .go_online(params.skip_consistency_check, params.electrum_url.clone());
             shiro_wallet.online = Some(result.unwrap())
         })
         .await
@@ -87,7 +81,6 @@ mod tests {
         let params = GoOnlineParams {
             skip_consistency_check: true,
             electrum_url: "127.0.0.1:50001".to_string(),
-            proxy_url: "http://proxy.rgbtools.org".to_string(),
         };
         let req = test::TestRequest::put()
             .uri("/wallet/go_online")
@@ -125,7 +118,6 @@ mod tests {
         let params = GoOnlineParams {
             skip_consistency_check: true,
             electrum_url: "127.0.0.1:50001".to_string(),
-            proxy_url: "http://proxy.rgbtools.org".to_string(),
         };
         let req = test::TestRequest::put()
             .uri("/wallet/go_online")

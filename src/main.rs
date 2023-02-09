@@ -42,8 +42,12 @@ mod tests {
     use super::*;
 
     use actix_web::{test, web, App};
+    use once_cell::sync::Lazy;
     use serde::Deserialize;
     use serde::Serialize;
+
+    pub static PROXY_ENDPOINT: Lazy<String> =
+        Lazy::new(|| "rgbhttpjsonrpc:http://127.0.0.1:3000/json-rpc".to_string());
 
     #[derive(Serialize, Deserialize)]
     pub struct OnlineResult {

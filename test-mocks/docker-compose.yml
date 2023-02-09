@@ -16,3 +16,7 @@ services:
       - 50001:50001
     depends_on:
       - bitcoind
+  proxy:
+    image: ghcr.io/grunch/rgb-proxy-server:0.1.0
+    ports:
+      - 3000:3000
