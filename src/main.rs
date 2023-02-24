@@ -1,5 +1,6 @@
 use crate::wallet::ShiroWallet;
-use actix_web::{web, App, HttpServer};
+use actix_cors::Cors;
+use actix_web::{http::header, web, App, HttpServer};
 use std::sync::Mutex;
 
 mod healthz;
@@ -11,8 +12,20 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         let shiro_wallet = Mutex::new(wallet::ShiroWallet::new());
         let data = web::Data::new(shiro_wallet);
+        let cors = Cors::default()
+            .allowed_origin("*")
+            .allowed_methods(vec!["GET", "DELETE", "POST", "PUT"])
+            .allowed_headers(vec![
+                header::AUTHORIZATION,
+                header::ACCEPT,
+                header::CONTENT_TYPE,
+            ])
+            .supports_credentials()
+            .max_age(3600);
+
         App::new()
             .app_data(data)
+            .wrap(cors)
             .service(healthz::get)
             .service(keys::post)
             .service(keys::put)
