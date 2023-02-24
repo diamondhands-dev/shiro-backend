@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.2.1"
+actix-cors = "0.6.4"
 clap = { version = "4.0.15", features = ["derive", "env"] }
 rand = "0.8.5"
 rgb-lib = "=0.1.7"
