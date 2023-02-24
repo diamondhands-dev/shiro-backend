@@ -1,6 +1,6 @@
 FROM rust:1.66-slim-bullseye as builder
 RUN apt-get update \
- && apt-get install -y libcrypt1-dev libssl-dev g++ pkg-config \
+ && apt-get install -y libcrypt1-dev libssl-dev g++ pkg-config git \
  && rm -fr /var/lib/apt/lists/* \
  && mkdir -p /tmp/shiro-wallet
 WORKDIR /usr/src/myapp
