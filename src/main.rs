@@ -14,11 +14,13 @@ async fn main() -> std::io::Result<()> {
         let data = web::Data::new(shiro_wallet);
         let cors = Cors::default()
             .allowed_origin("*")
-            .allowed_methods(vec!["GET", "DELETE", "POST", "PUT"])
+            .allowed_methods(vec!["GET", "DELETE", "OPTIONS", "POST", "PUT"])
             .allowed_headers(vec![
                 header::AUTHORIZATION,
                 header::ACCEPT,
+                header::ACCEPT_ENCODING,
                 header::CONTENT_TYPE,
+                header::CONTENT_LENGTH,
             ])
             .supports_credentials()
             .max_age(3600);
