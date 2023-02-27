@@ -13,7 +13,8 @@ async fn main() -> std::io::Result<()> {
         let shiro_wallet = Mutex::new(wallet::ShiroWallet::new());
         let data = web::Data::new(shiro_wallet);
         let cors = Cors::default()
-            .allowed_origin("*")
+            .allow_any_origin()
+            .send_wildcard()
             .allowed_methods(vec!["GET", "DELETE", "OPTIONS", "POST", "PUT"])
             .allowed_headers(vec![
                 header::AUTHORIZATION,
@@ -22,7 +23,6 @@ async fn main() -> std::io::Result<()> {
                 header::CONTENT_TYPE,
                 header::CONTENT_LENGTH,
             ])
-            .supports_credentials()
             .max_age(3600);
 
         App::new()
