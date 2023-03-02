@@ -1,5 +1,5 @@
 use crate::ShiroWallet;
-use actix_web::{get, web, HttpResponse, Responder};
+use actix_web::{delete, get, web, HttpResponse, Responder};
 use rgb_lib::{
     wallet::{Outpoint, TransferKind},
     TransferStatus,
@@ -94,6 +94,49 @@ pub async fn get(
     }
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct TransferDeleteParams {
+    blinded_utxo: Option<String>,
+    txid: Option<String>,
+    no_asset_only: bool,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct TransferDeleteResult {
+    transfers_changed: bool,
+}
+
+#[delete("/wallet/transfers")]
+pub async fn delete(
+    params: web::Json<TransferDeleteParams>,
+    data: web::Data<Mutex<ShiroWallet>>,
+) -> impl Responder {
+    if data.lock().unwrap().wallet.is_some() {
+        match actix_web::rt::task::spawn_blocking(move || {
+            data.lock()
+                .unwrap()
+                .wallet
+                .as_mut()
+                .unwrap()
+                .delete_transfers(
+                    params.blinded_utxo.clone(),
+                    params.txid.clone(),
+                    params.no_asset_only,
+                )
+        })
+        .await
+        .unwrap()
+        {
+            Ok(transfers_changed) => {
+                HttpResponse::Ok().json(TransferDeleteResult { transfers_changed })
+            }
+            Err(e) => HttpResponse::BadRequest().body(e.to_string()),
+        }
+    } else {
+        HttpResponse::BadRequest().body("wallet should be created first")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -109,7 +152,7 @@ mod tests {
     use rgb_lib::generate_keys;
 
     #[actix_web::test]
-    async fn test_get() {
+    async fn test() {
         let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
@@ -186,7 +229,22 @@ mod tests {
             .set_json(params)
             .to_request();
         let resp = test::call_service(&app, req).await;
-        println!("{:?}", resp);
         assert!(resp.status().is_success());
+        println!("get {:?}", test::read_body(resp).await);
+        {
+            let params = TransferDeleteParams {
+                blinded_utxo: None,
+                txid: None,
+                no_asset_only: false,
+            };
+            let req = test::TestRequest::delete()
+                .uri("/wallet/transfers")
+                .set_json(params)
+                .to_request();
+            let resp = test::call_service(&app, req).await;
+            let status = resp.status().is_client_error();
+            println!("delete {:?}", test::read_body(resp).await);
+            assert!(status);
+        }
     }
 }
