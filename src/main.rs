@@ -43,6 +43,7 @@ async fn main() -> std::io::Result<()> {
             .service(wallet::refresh::post)
             .service(wallet::send::post)
             .service(wallet::put)
+            .service(wallet::transfers::delete)
             .service(wallet::transfers::get)
             .service(wallet::unspents::get)
             .service(wallet::utxos::put)
