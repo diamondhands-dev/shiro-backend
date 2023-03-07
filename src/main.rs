@@ -45,7 +45,7 @@ async fn main() -> std::io::Result<()> {
             .service(wallet::put)
             .service(wallet::transfers::delete)
             .service(wallet::transfers::get)
-            .service(wallet::unspents::get)
+            .service(wallet::unspents::put)
             .service(wallet::utxos::put)
     })
     .bind("0.0.0.0:8080")?

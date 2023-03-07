@@ -1,5 +1,5 @@
 use crate::ShiroWallet;
-use actix_web::{get, web, HttpResponse, Responder};
+use actix_web::{put, web, HttpResponse, Responder};
 use rgb_lib::wallet::Outpoint;
 use serde::Deserialize;
 use serde::Serialize;
@@ -67,8 +67,8 @@ pub struct UnspentsResult {
     unspents: Vec<Unspent>,
 }
 
-#[get("/wallet/unspents")]
-pub async fn get(
+#[put("/wallet/unspents")]
+pub async fn put(
     params: web::Json<UnspentsParams>,
     data: web::Data<Mutex<ShiroWallet>>,
 ) -> impl Responder {
@@ -105,12 +105,12 @@ mod tests {
     use rgb_lib::generate_keys;
 
     #[actix_web::test]
-    async fn test_get() {
+    async fn test_put() {
         let shiro_wallet = Mutex::new(ShiroWallet::new());
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(shiro_wallet))
-                .service(get)
+                .service(put)
                 .service(crate::wallet::put),
         )
         .await;
@@ -131,7 +131,7 @@ mod tests {
         }
         {
             let params = UnspentsParams { settled_only: true };
-            let req = test::TestRequest::get()
+            let req = test::TestRequest::put()
                 .uri("/wallet/unspents")
                 .set_json(params)
                 .to_request();
