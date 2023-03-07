@@ -1,5 +1,5 @@
 use crate::{wallet::Balance, ShiroWallet};
-use actix_web::{get, web, HttpResponse, Responder};
+use actix_web::{put, web, HttpResponse, Responder};
 use rgb_lib::wallet::AssetType;
 use serde::Deserialize;
 use serde::Serialize;
@@ -103,8 +103,8 @@ pub struct AssetsResult {
     assets: Assets,
 }
 
-#[get("/wallet/assets")]
-pub async fn get(
+#[put("/wallet/assets")]
+pub async fn put(
     params: web::Json<AssetsParams>,
     data: web::Data<Mutex<ShiroWallet>>,
 ) -> impl Responder {
@@ -143,7 +143,7 @@ mod tests {
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(shiro_wallet))
-                .service(get)
+                .service(put)
                 .service(crate::wallet::put),
         )
         .await;
@@ -166,7 +166,7 @@ mod tests {
             let params = AssetsParams {
                 filter_asset_types: vec![],
             };
-            let req = test::TestRequest::get()
+            let req = test::TestRequest::put()
                 .uri("/wallet/assets")
                 .set_json(params)
                 .to_request();
