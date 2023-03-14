@@ -1,5 +1,5 @@
 use crate::ShiroWallet;
-use actix_web::{delete, get, web, HttpResponse, Responder};
+use actix_web::{delete, put, web, HttpResponse, Responder};
 use rgb_lib::{
     wallet::{Outpoint, TransferKind},
     TransferStatus,
@@ -64,8 +64,8 @@ pub struct TransferResult {
     transfers: Vec<Transfer>,
 }
 
-#[get("/wallet/transfers")]
-pub async fn get(
+#[put("/wallet/transfers")]
+pub async fn put(
     params: web::Json<TransferParams>,
     data: web::Data<Mutex<ShiroWallet>>,
 ) -> impl Responder {
@@ -162,7 +162,7 @@ mod tests {
                 .service(crate::wallet::utxos::put)
                 .service(crate::wallet::go_online::put)
                 .service(crate::wallet::issue::rgb20::put)
-                .service(get),
+                .service(put),
         )
         .await;
 
@@ -224,13 +224,13 @@ mod tests {
         let params = TransferParams {
             asset_id: rgb20_result.asset_id,
         };
-        let req = test::TestRequest::get()
+        let req = test::TestRequest::put()
             .uri("/wallet/transfers")
             .set_json(params)
             .to_request();
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
-        println!("get {:?}", test::read_body(resp).await);
+        println!("put {:?}", test::read_body(resp).await);
         {
             let params = TransferDeleteParams {
                 blinded_utxo: None,
