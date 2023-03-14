@@ -25,6 +25,8 @@ async fn main() -> std::io::Result<()> {
             ])
             .max_age(3600);
 
+        let frontend = actix_files::Files::new("/", "./app").index_file("index.html");
+
         App::new()
             .app_data(data)
             .wrap(cors)
@@ -47,6 +49,7 @@ async fn main() -> std::io::Result<()> {
             .service(wallet::transfers::put)
             .service(wallet::unspents::put)
             .service(wallet::utxos::put)
+            .service(frontend)
     })
     .bind("0.0.0.0:8080")?
     .run()
