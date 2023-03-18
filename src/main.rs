@@ -34,6 +34,7 @@ async fn main() -> std::io::Result<()> {
             .service(keys::post)
             .service(keys::put)
             .service(wallet::address::get)
+            .service(wallet::invoice::put)
             .service(wallet::asset_balance::get)
             .service(wallet::assets::put)
             .service(wallet::blind::put)

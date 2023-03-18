@@ -12,6 +12,7 @@ pub mod data;
 pub mod dir;
 pub mod drain_to;
 pub mod go_online;
+pub mod invoice;
 pub mod issue;
 pub mod refresh;
 pub mod send;
