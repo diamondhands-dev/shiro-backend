@@ -24,10 +24,11 @@ docker run -d -p 8080:8080 -e BITCOIN_NETWORK={network_name} ghcr.io/diamondhand
 ```
 git clone https://github.com/diamondhands-dev/shiro-backend.git
 cd shiro-backend
-cargo install
+cargo install --path .
 export BITCOIN_NETWORK_NAME={network_name}
-export ELECTRUM_URL=127.0.0.1:50001
-export RGB_PROXY_URL=http://proxy.rgbtools.org
+export ELECTRUM_URL={electrum_url}
+export RGB_PROXY_URL={rgb_proxy_url}
+mkdir -p /tmp/shiro-wallet
 
 shiro-backend
 ```
