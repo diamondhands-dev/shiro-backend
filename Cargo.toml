@@ -1,6 +1,6 @@
 [package]
 name = "shiro-backend"
-version = "0.4.2"
+version = "0.4.3"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -19,6 +19,3 @@ serde_json = "1.0"
 actix-rt = "2.1.0"
 async-trait = "0.1.59"
 once_cell = "1.16.0"
-
-[registries.crates-io]
-protocol = "sparse"
