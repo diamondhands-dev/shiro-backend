@@ -40,7 +40,7 @@ pub async fn put(
                         .amounts
                         .clone()
                         .into_iter()
-                        .map(|str| str.parse::<u64>().unwrap())
+                        .map(|str| str.parse::<u64>().unwrap_or_default())
                         .collect(),
                 )
             })
