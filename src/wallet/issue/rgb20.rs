@@ -148,5 +148,20 @@ mod tests {
             println!("{:?}", resp);
             assert!(resp.status().is_success());
         }
+        {
+            let params = Rgb20Params {
+                ticker: "FAKEMONA".to_string(),
+                name: "Fake Monacoin".to_string(),
+                presision: 8,
+                amounts: vec!["".to_string()],
+            };
+            let req = test::TestRequest::put()
+                .uri("/wallet/issue/rgb20")
+                .set_json(params)
+                .to_request();
+            let resp = test::call_service(&app, req).await;
+            println!("{:?}", resp);
+            assert!(resp.status().is_success());
+        }
     }
 }
