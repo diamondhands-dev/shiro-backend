@@ -74,7 +74,7 @@ mod tests {
     use crate::wallet::{
         address::AddressResult, go_online::GoOnlineParams, tests::fund_wallet, utxos::UtxosParams,
     };
-    use actix_web::{test, web, App};
+    use actix_web::{http, test, web, App};
     use rgb_lib::generate_keys;
 
     #[actix_web::test]
@@ -161,7 +161,7 @@ mod tests {
                 .to_request();
             let resp = test::call_service(&app, req).await;
             println!("{:?}", resp);
-            assert!(resp.status().is_success());
+            assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
         }
     }
 }
