@@ -40,7 +40,7 @@ pub async fn put(
                         .amounts
                         .clone()
                         .into_iter()
-                        .map(|str| str.parse::<u64>().unwrap())
+                        .flat_map(|str| str.parse::<u64>())
                         .collect(),
                 )
             })
@@ -74,7 +74,7 @@ mod tests {
     use crate::wallet::{
         address::AddressResult, go_online::GoOnlineParams, tests::fund_wallet, utxos::UtxosParams,
     };
-    use actix_web::{test, web, App};
+    use actix_web::{http, test, web, App};
     use rgb_lib::generate_keys;
 
     #[actix_web::test]
@@ -147,6 +147,21 @@ mod tests {
             let resp = test::call_service(&app, req).await;
             println!("{:?}", resp);
             assert!(resp.status().is_success());
+        }
+        {
+            let params = Rgb20Params {
+                ticker: "FAKEMONA".to_string(),
+                name: "Fake Monacoin".to_string(),
+                presision: 8,
+                amounts: vec!["".to_string()],
+            };
+            let req = test::TestRequest::put()
+                .uri("/wallet/issue/rgb20")
+                .set_json(params)
+                .to_request();
+            let resp = test::call_service(&app, req).await;
+            println!("{:?}", resp);
+            assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
         }
     }
 }
