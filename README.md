@@ -1,7 +1,7 @@
 # shiro-backend
 Wallet server for the RGB protocol (that is defined LNP/BP)
 
-# Prequisite
+# Prerequisite
 
 * Electrum and bitcoin-node that sync on your bitcoin network. (`mainnet`, `testnet`, `signet`, or `regtest`).
 * rgb-proxy-server.  One of the rgb-proxy-server is https://github.com/grunch/rgb-proxy-server .
@@ -37,7 +37,7 @@ Environment variables will be fixed for your runtime environment.
 
 # How to test
 
-## Prequisite
+## Prerequisite
 
 * Linux runs on 64bit architecture.
   * You'll get a build error on 32bit versions of Linux (like i386, armv7).
