@@ -68,7 +68,7 @@ mod tests {
     use serde::Serialize;
 
     pub static PROXY_ENDPOINT: Lazy<String> =
-        Lazy::new(|| "rgbhttpjsonrpc:http://127.0.0.1:3000/json-rpc".to_string());
+        Lazy::new(|| "rpc://127.0.0.1:3000/json-rpc".to_string());
 
     #[derive(Serialize, Deserialize)]
     pub struct OnlineResult {
