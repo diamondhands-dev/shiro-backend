@@ -1,13 +1,13 @@
 use crate::{wallet::Balance, ShiroWallet};
 use actix_web::{put, web, HttpResponse, Responder};
-use rgb_lib::wallet::AssetType;
+use rgb_lib::wallet::AssetIface;
 use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Mutex;
 
 #[derive(Deserialize, Serialize)]
 pub struct AssetsParams {
-    filter_asset_types: Vec<AssetType>,
+    filter_asset_types: Vec<AssetIface>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -47,19 +47,18 @@ impl From<rgb_lib::wallet::AssetRgb20> for AssetRgb20 {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct AssetRgb121 {
+pub struct AssetRgb25 {
     asset_id: String,
     name: String,
     precision: u8,
     description: Option<String>,
     balance: Balance,
     data_paths: Vec<Media>,
-    parent_id: Option<String>,
 }
 
-impl From<rgb_lib::wallet::AssetRgb121> for AssetRgb121 {
-    fn from(origin: rgb_lib::wallet::AssetRgb121) -> AssetRgb121 {
-        AssetRgb121 {
+impl From<rgb_lib::wallet::AssetRgb25> for AssetRgb25 {
+    fn from(origin: rgb_lib::wallet::AssetRgb25) -> AssetRgb25 {
+        AssetRgb25 {
             asset_id: origin.asset_id,
             name: origin.name,
             precision: origin.precision,
@@ -70,7 +69,6 @@ impl From<rgb_lib::wallet::AssetRgb121> for AssetRgb121 {
                 .into_iter()
                 .map(Media::from)
                 .collect::<Vec<Media>>(),
-            parent_id: origin.parent_id,
         }
     }
 }
@@ -78,7 +76,7 @@ impl From<rgb_lib::wallet::AssetRgb121> for AssetRgb121 {
 #[derive(Deserialize, Serialize)]
 pub struct Assets {
     rgb20: Option<Vec<AssetRgb20>>,
-    rgb121: Option<Vec<AssetRgb121>>,
+    rgb25: Option<Vec<AssetRgb25>>,
 }
 
 impl From<rgb_lib::wallet::Assets> for Assets {
@@ -89,10 +87,10 @@ impl From<rgb_lib::wallet::Assets> for Assets {
                     .map(AssetRgb20::from)
                     .collect::<Vec<AssetRgb20>>()
             }),
-            rgb121: x.rgb121.map(|vec| {
+            rgb25: x.rgb25.map(|vec| {
                 vec.into_iter()
-                    .map(AssetRgb121::from)
-                    .collect::<Vec<AssetRgb121>>()
+                    .map(AssetRgb25::from)
+                    .collect::<Vec<AssetRgb25>>()
             }),
         }
     }
