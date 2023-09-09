@@ -24,7 +24,7 @@ impl Recipient {
         rgb_lib::wallet::Recipient {
             blinded_utxo: self.blinded_utxo.clone(),
             amount: str::parse::<u64>(&self.amount).unwrap(),
-            consignment_endpoints: self.consignment_endpoints.clone(),
+            transport_endpoints: self.consignment_endpoints.clone(),
         }
     }
 }
@@ -34,7 +34,7 @@ impl From<rgb_lib::wallet::Recipient> for Recipient {
         Recipient {
             blinded_utxo: x.blinded_utxo,
             amount: x.amount.to_string(),
-            consignment_endpoints: x.consignment_endpoints,
+            consignment_endpoints: x.transport_endpoints,
         }
     }
 }
