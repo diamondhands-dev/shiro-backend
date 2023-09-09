@@ -9,14 +9,14 @@ pub struct BlindParams {
     asset_id: Option<String>,
     amount: Option<String>,
     duration_seconds: Option<u32>,
-    consignment_endpoints: Vec<String>,
+    transport_endpoints: Vec<String>,
 }
 
 pub struct BlindParamsForLib {
     asset_id: Option<String>,
     amount: Option<u64>,
     duration_seconds: Option<u32>,
-    consignment_endpoints: Vec<String>,
+    transport_endpoints: Vec<String>,
 }
 
 impl From<BlindParams> for BlindParamsForLib {
@@ -25,7 +25,7 @@ impl From<BlindParams> for BlindParamsForLib {
             asset_id: x.asset_id,
             amount: x.amount.map(|str| str.parse::<u64>().unwrap()),
             duration_seconds: x.duration_seconds,
-            consignment_endpoints: x.consignment_endpoints,
+            transport_endpoints: x.transport_endpoints,
         }
     }
 }
@@ -61,7 +61,7 @@ pub async fn put(
                 params.asset_id.clone(),
                 params.amount,
                 params.duration_seconds,
-                params.consignment_endpoints,
+                params.transport_endpoints,
             )
         })
         .await
@@ -164,7 +164,7 @@ mod tests {
             asset_id: Some(rgb20_result.asset_id),
             amount: Some("10".to_string()),
             duration_seconds: Some(10),
-            consignment_endpoints: vec![PROXY_ENDPOINT.clone()],
+            transport_endpoints: vec![PROXY_ENDPOINT.clone()],
         };
         let req = test::TestRequest::put()
             .uri("/wallet/blind")
