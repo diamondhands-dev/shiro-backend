@@ -1,6 +1,6 @@
 [package]
 name = "shiro-backend"
-version = "0.4.3"
+version = "0.4.4"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -11,7 +11,7 @@ actix-cors = "0.6.4"
 actix-files = "0.6.2"
 clap = { version = "4.0.15", features = ["derive", "env"] }
 rand = "0.8.5"
-rgb-lib = "=0.1.7"
+rgb-lib = "=0.2.0-alpha.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
