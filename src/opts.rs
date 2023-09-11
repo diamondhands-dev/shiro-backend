@@ -82,7 +82,7 @@ mod parser {
                 "testnet" => Ok(Self::Testnet),
                 "regtest" => Ok(Self::Regtest),
                 "signet" => Ok(Self::Signet),
-                _ => Err(format!("Unknown butcoin network: {s}")),
+                _ => Err(format!("Unknown bitcoin network: {s}")),
             }
         }
     }
