@@ -16,7 +16,7 @@ pub struct SendParams {
 struct Recipient {
     blinded_utxo: String,
     amount: String,
-    consignment_endpoints: Vec<String>,
+    transport_endpoints: Vec<String>,
 }
 
 impl Recipient {
@@ -24,7 +24,7 @@ impl Recipient {
         rgb_lib::wallet::Recipient {
             blinded_utxo: self.blinded_utxo.clone(),
             amount: str::parse::<u64>(&self.amount).unwrap(),
-            transport_endpoints: self.consignment_endpoints.clone(),
+            transport_endpoints: self.transport_endpoints.clone(),
         }
     }
 }
@@ -34,7 +34,7 @@ impl From<rgb_lib::wallet::Recipient> for Recipient {
         Recipient {
             blinded_utxo: x.blinded_utxo,
             amount: x.amount.to_string(),
-            consignment_endpoints: x.transport_endpoints,
+            transport_endpoints: x.transport_endpoints,
         }
     }
 }
@@ -214,7 +214,7 @@ mod tests {
             vec![Recipient {
                 blinded_utxo,
                 amount: "10".to_string(),
-                consignment_endpoints: vec![PROXY_ENDPOINT.clone()],
+                transport_endpoints: vec![PROXY_ENDPOINT.clone()],
             }],
         );
         let params = SendParams {
