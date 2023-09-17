@@ -11,6 +11,7 @@ pub mod blind;
 pub mod data;
 pub mod dir;
 pub mod drain_to;
+pub mod fail_transfers;
 pub mod go_online;
 pub mod invoice;
 pub mod issue;
