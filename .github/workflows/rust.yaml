@@ -54,7 +54,7 @@ jobs:
           BITCOIN_NETWORK_NAME: regtest
         run: |
           cargo install cargo-tarpaulin
-          cargo tarpaulin --release --out Xml
+          cargo tarpaulin --release --out xml
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v3
