@@ -1,10 +1,10 @@
 use crate::ShiroWallet;
 use actix_web::{post, web, HttpResponse, Responder};
+use rgb_lib::wallet::RecipientData;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Mutex;
-use rgb_lib::wallet::RecipientData;
 
 #[derive(Serialize, Deserialize)]
 pub struct SendParams {
@@ -95,8 +95,8 @@ pub async fn post(
 mod tests {
     use super::*;
 
-    use crate::tests::PROXY_ENDPOINT;
     use crate::tests::MIN_CONFIRMATIONS;
+    use crate::tests::PROXY_ENDPOINT;
     use crate::wallet::{
         address::AddressResult,
         go_online::GoOnlineParams,
@@ -134,7 +134,13 @@ mod tests {
                 .create_utxos(online, true, Some(1), None, 1.0)
                 .unwrap();
             let receive_data = wallet
-                .blind_receive(None, None, None, vec![PROXY_ENDPOINT.clone()], MIN_CONFIRMATIONS)
+                .blind_receive(
+                    None,
+                    None,
+                    None,
+                    vec![PROXY_ENDPOINT.clone()],
+                    MIN_CONFIRMATIONS,
+                )
                 .unwrap();
             //let blind_data = wallet.blind(Some(asset_id), Some(10), None).unwrap();
             receive_data.recipient_id
@@ -219,7 +225,9 @@ mod tests {
         recipient_map.insert(
             rgb20_result.asset_id,
             vec![Recipient {
-                recipient_data: RecipientData::BlindedUTXO(SecretSeal::from_str(&recipient_id).unwrap()),
+                recipient_data: RecipientData::BlindedUTXO(
+                    SecretSeal::from_str(&recipient_id).unwrap(),
+                ),
                 amount: "10".to_string(),
                 transport_endpoints: vec![PROXY_ENDPOINT.clone()],
             }],

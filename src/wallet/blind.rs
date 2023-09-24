@@ -40,8 +40,8 @@ pub struct ReceiveData {
     expiration_timestamp: Option<String>,
 }
 
-impl From<rgb_lib::wallet::ReceiveData > for ReceiveData {
-    fn from(x: rgb_lib::wallet::ReceiveData ) -> ReceiveData {
+impl From<rgb_lib::wallet::ReceiveData> for ReceiveData {
+    fn from(x: rgb_lib::wallet::ReceiveData) -> ReceiveData {
         ReceiveData {
             invoice: x.invoice,
             recipient_id: x.recipient_id,
@@ -69,12 +69,12 @@ pub async fn put(
         .await
         .unwrap()
         {
-            Ok(receive_data ) => HttpResponse::Ok().json(ReceiveData::from(receive_data)),
+            Ok(receive_data) => HttpResponse::Ok().json(ReceiveData::from(receive_data)),
             Err(e) => {
                 println!("receive_data Err");
                 println!("{:?}", e.to_string());
                 HttpResponse::BadRequest().body(e.to_string())
-            },
+            }
         }
     } else {
         HttpResponse::BadRequest().body("wallet should be created first")
@@ -85,7 +85,7 @@ pub async fn put(
 mod tests {
     use super::*;
 
-    use crate::tests::{PROXY_ENDPOINT, MIN_CONFIRMATIONS};
+    use crate::tests::{MIN_CONFIRMATIONS, PROXY_ENDPOINT};
     use crate::wallet::{
         address::AddressResult,
         go_online::GoOnlineParams,
