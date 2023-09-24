@@ -14,9 +14,10 @@ pub async fn put(params: web::Json<RgbInvoice>) -> impl Responder {
     match decoded {
         Ok(invoice) => HttpResponse::Ok().json(InvoiceData {
             asset_iface: invoice.invoice_data().asset_iface,
-            blinded_utxo: invoice.invoice_data().blinded_utxo,
+            recipient_id: invoice.invoice_data().recipient_id,
             asset_id: invoice.invoice_data().asset_id,
             amount: invoice.invoice_data().amount,
+            network: invoice.invoice_data().network,
             expiration_timestamp: invoice.invoice_data().expiration_timestamp,
             transport_endpoints: invoice.invoice_data().transport_endpoints,
         }),
@@ -46,7 +47,7 @@ mod tests {
         println!("{:?}", resp);
         assert!(resp.status().is_success());
         let body: InvoiceData = test::read_body_json(resp).await;
-        let result = BlindedUTXO::new(body.blinded_utxo);
+        let result = BlindedUTXO::new(body.recipient_id);
         assert!(result.is_ok());
     }
 

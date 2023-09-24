@@ -1,7 +1,7 @@
 use crate::ShiroWallet;
 use actix_web::{delete, put, web, HttpResponse, Responder};
 use rgb_lib::{
-    wallet::{Outpoint, TransferKind},
+    wallet::{Outpoint, TransferKind, TransferTransportEndpoint},
     TransferStatus,
 };
 use serde::Deserialize;
@@ -22,11 +22,11 @@ pub struct Transfer {
     amount: String,
     kind: String,
     txid: Option<String>,
-    blinded_utxo: Option<String>,
-    unblinded_utxo: Option<Outpoint>,
+    recipient_id: Option<String>,
+    receive_utxo: Option<Outpoint>,
     change_utxo: Option<Outpoint>,
-    blinding_secret: Option<String>,
     expiration: Option<String>,
+    transport_endpoints: Vec<TransferTransportEndpoint>,
 }
 
 impl From<rgb_lib::wallet::Transfer> for Transfer {
@@ -45,16 +45,18 @@ impl From<rgb_lib::wallet::Transfer> for Transfer {
             amount: x.amount.to_string(),
             kind: match x.kind {
                 TransferKind::Issuance => "issuance",
-                TransferKind::Receive => "receive",
+                TransferKind::ReceiveBlind => "receive",
+                // FIXME
+                TransferKind::ReceiveWitness => "receive",
                 TransferKind::Send => "send",
             }
             .to_string(),
             txid: x.txid,
-            blinded_utxo: x.blinded_utxo,
-            unblinded_utxo: x.unblinded_utxo,
+            recipient_id: x.recipient_id,
+            receive_utxo: x.receive_utxo,
             change_utxo: x.change_utxo,
-            blinding_secret: x.blinding_secret.map(|n| n.to_string()),
             expiration: x.expiration.map(|n| n.to_string()),
+            transport_endpoints: x.transport_endpoints,
         }
     }
 }

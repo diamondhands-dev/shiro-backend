@@ -31,7 +31,7 @@ pub async fn put(
             match actix_web::rt::task::spawn_blocking(move || {
                 let mut shiro_wallet = data.lock().unwrap();
                 let online = shiro_wallet.get_online().unwrap();
-                shiro_wallet.wallet.as_mut().unwrap().issue_asset_rgb20(
+                shiro_wallet.wallet.as_mut().unwrap().issue_asset_nia(
                     online,
                     params.ticker.clone(),
                     params.name.clone(),

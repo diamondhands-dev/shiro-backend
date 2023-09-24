@@ -137,10 +137,13 @@ pub fn get_wallet_data() -> rgb_lib::wallet::WalletData {
         panic!("Internal error: an wrong args.database_type should be checked in the parser.")
     };
 
+    let max_allocations_per_utxo = 1;
+
     WalletData {
         data_dir: args.data_dir,
         bitcoin_network,
         database_type,
+        max_allocations_per_utxo,
         pubkey: "".to_string(),
         mnemonic: None,
     }

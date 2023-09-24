@@ -70,6 +70,8 @@ mod tests {
     pub static PROXY_ENDPOINT: Lazy<String> =
         Lazy::new(|| "rpc://127.0.0.1:3000/json-rpc".to_string());
 
+    pub static MIN_CONFIRMATIONS: u8 = 1;
+
     #[derive(Serialize, Deserialize)]
     pub struct OnlineResult {
         pub id: String,
