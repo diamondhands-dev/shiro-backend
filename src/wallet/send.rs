@@ -16,6 +16,7 @@ pub struct SendParams {
 
 #[derive(Serialize, Deserialize)]
 struct Recipient {
+    // TODO switch `BlindedUTXO` or `WitnessData`
     recipient_data: RecipientData,
     amount: String,
     transport_endpoints: Vec<String>,
