@@ -70,11 +70,7 @@ pub async fn put(
         .unwrap()
         {
             Ok(receive_data) => HttpResponse::Ok().json(ReceiveData::from(receive_data)),
-            Err(e) => {
-                println!("receive_data Err");
-                println!("{:?}", e.to_string());
-                HttpResponse::BadRequest().body(e.to_string())
-            }
+            Err(e) => HttpResponse::BadRequest().body(e.to_string()),
         }
     } else {
         HttpResponse::BadRequest().body("wallet should be created first")
@@ -180,5 +176,9 @@ mod tests {
         let resp = test::call_service(&app, req).await;
         println!("{:?}", resp);
         assert!(resp.status().is_success());
+        let body: ReceiveData = test::read_body_json(resp).await;
+        assert!(body.invoice.starts_with("rgb:"));
+        assert!(body.recipient_id.starts_with("utxob:"));
+        assert!(body.expiration_timestamp.is_some());
     }
 }
