@@ -1,13 +1,13 @@
 use crate::{wallet::Balance, ShiroWallet};
 use actix_web::{put, web, HttpResponse, Responder};
-use rgb_lib::wallet::AssetIface;
+use rgb_lib::AssetSchema;
 use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Mutex;
 
 #[derive(Deserialize, Serialize)]
 pub struct AssetsParams {
-    filter_asset_types: Vec<AssetIface>,
+    filter_asset_types: Vec<AssetSchema>,
 }
 
 #[derive(Deserialize, Serialize)]
