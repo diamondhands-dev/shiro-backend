@@ -77,6 +77,7 @@ pub async fn put(
                 data_dir: base_data.data_dir,
                 bitcoin_network: base_data.bitcoin_network,
                 database_type: base_data.database_type,
+                max_allocations_per_utxo: base_data.max_allocations_per_utxo,
                 pubkey: params.pubkey.clone(),
                 mnemonic: Some(params.mnemonic.clone()),
             };

@@ -1,5 +1,6 @@
 use crate::ShiroWallet;
 use actix_web::{post, web, HttpResponse, Responder};
+use rgb_lib::wallet::RecipientData;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -10,11 +11,13 @@ pub struct SendParams {
     recipient_map: HashMap<String, Vec<Recipient>>,
     donation: bool,
     fee_rate: f32,
+    min_confirmations: u8,
 }
 
 #[derive(Serialize, Deserialize)]
 struct Recipient {
-    blinded_utxo: String,
+    // TODO switch `BlindedUTXO` or `WitnessData`
+    recipient_data: RecipientData,
     amount: String,
     transport_endpoints: Vec<String>,
 }
@@ -22,7 +25,7 @@ struct Recipient {
 impl Recipient {
     pub fn conv(&self) -> rgb_lib::wallet::Recipient {
         rgb_lib::wallet::Recipient {
-            blinded_utxo: self.blinded_utxo.clone(),
+            recipient_data: self.recipient_data.clone(),
             amount: str::parse::<u64>(&self.amount).unwrap(),
             transport_endpoints: self.transport_endpoints.clone(),
         }
@@ -32,7 +35,7 @@ impl Recipient {
 impl From<rgb_lib::wallet::Recipient> for Recipient {
     fn from(x: rgb_lib::wallet::Recipient) -> Recipient {
         Recipient {
-            blinded_utxo: x.blinded_utxo,
+            recipient_data: x.recipient_data,
             amount: x.amount.to_string(),
             transport_endpoints: x.transport_endpoints,
         }
@@ -72,6 +75,7 @@ pub async fn post(
                     recipient_map,
                     params.donation,
                     params.fee_rate,
+                    params.min_confirmations,
                 )
             })
             .await
@@ -92,6 +96,7 @@ pub async fn post(
 mod tests {
     use super::*;
 
+    use crate::tests::MIN_CONFIRMATIONS;
     use crate::tests::PROXY_ENDPOINT;
     use crate::wallet::{
         address::AddressResult,
@@ -104,15 +109,18 @@ mod tests {
     use rgb_lib::{
         generate_keys,
         wallet::{Wallet, WalletData},
+        SecretSeal,
     };
+    use std::str::FromStr;
 
-    async fn get_blinded_utxo() -> String {
+    async fn get_recipient_id() -> String {
         let keys = generate_keys(rgb_lib::BitcoinNetwork::Regtest);
         let base_data = shiro_backend::opts::get_wallet_data();
         let wallet_data = WalletData {
             data_dir: base_data.data_dir,
             bitcoin_network: base_data.bitcoin_network,
             database_type: base_data.database_type,
+            max_allocations_per_utxo: 1,
             pubkey: keys.xpub,
             mnemonic: Some(keys.mnemonic),
         };
@@ -126,11 +134,17 @@ mod tests {
             wallet
                 .create_utxos(online, true, Some(1), None, 1.0)
                 .unwrap();
-            let blind_data = wallet
-                .blind(None, None, None, vec![PROXY_ENDPOINT.clone()])
+            let receive_data = wallet
+                .blind_receive(
+                    None,
+                    None,
+                    None,
+                    vec![PROXY_ENDPOINT.clone()],
+                    MIN_CONFIRMATIONS,
+                )
                 .unwrap();
             //let blind_data = wallet.blind(Some(asset_id), Some(10), None).unwrap();
-            blind_data.blinded_utxo
+            receive_data.recipient_id
         })
         .await
         .unwrap()
@@ -207,12 +221,14 @@ mod tests {
                 .to_request();
             test::call_and_read_body_json(&app, req).await
         };
-        let blinded_utxo = get_blinded_utxo().await;
+        let recipient_id = get_recipient_id().await;
         let mut recipient_map = HashMap::new();
         recipient_map.insert(
             rgb20_result.asset_id,
             vec![Recipient {
-                blinded_utxo,
+                recipient_data: RecipientData::BlindedUTXO(
+                    SecretSeal::from_str(&recipient_id).unwrap(),
+                ),
                 amount: "10".to_string(),
                 transport_endpoints: vec![PROXY_ENDPOINT.clone()],
             }],
@@ -221,6 +237,7 @@ mod tests {
             recipient_map,
             donation: false,
             fee_rate: 1.0,
+            min_confirmations: MIN_CONFIRMATIONS,
         };
         let req = test::TestRequest::post()
             .uri("/wallet/send")

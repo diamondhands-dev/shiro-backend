@@ -79,7 +79,8 @@ pub async fn put(
                 .wallet
                 .as_mut()
                 .unwrap()
-                .list_unspents(params.settled_only)
+                // TODO Set `online` for syncing a wallet
+                .list_unspents(None, params.settled_only)
         })
         .await
         .unwrap()

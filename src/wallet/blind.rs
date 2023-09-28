@@ -10,6 +10,7 @@ pub struct BlindParams {
     amount: Option<String>,
     duration_seconds: Option<u32>,
     transport_endpoints: Vec<String>,
+    min_confirmations: u8,
 }
 
 pub struct BlindParamsForLib {
@@ -17,6 +18,7 @@ pub struct BlindParamsForLib {
     amount: Option<u64>,
     duration_seconds: Option<u32>,
     transport_endpoints: Vec<String>,
+    min_confirmations: u8,
 }
 
 impl From<BlindParams> for BlindParamsForLib {
@@ -26,30 +28,29 @@ impl From<BlindParams> for BlindParamsForLib {
             amount: x.amount.map(|str| str.parse::<u64>().unwrap()),
             duration_seconds: x.duration_seconds,
             transport_endpoints: x.transport_endpoints,
+            min_confirmations: x.min_confirmations,
         }
     }
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlindData {
+pub struct ReceiveData {
     invoice: String,
-    blinded_utxo: String,
-    blinding_secret: String,
+    recipient_id: String,
     expiration_timestamp: Option<String>,
 }
 
-impl From<rgb_lib::wallet::BlindData> for BlindData {
-    fn from(x: rgb_lib::wallet::BlindData) -> BlindData {
-        BlindData {
+impl From<rgb_lib::wallet::ReceiveData> for ReceiveData {
+    fn from(x: rgb_lib::wallet::ReceiveData) -> ReceiveData {
+        ReceiveData {
             invoice: x.invoice,
-            blinded_utxo: x.blinded_utxo,
-            blinding_secret: x.blinding_secret.to_string(),
+            recipient_id: x.recipient_id,
             expiration_timestamp: x.expiration_timestamp.map(|x| x.to_string()),
         }
     }
 }
 
-#[put("/wallet/blind")]
+#[put("/wallet/blind_receive")]
 pub async fn put(
     params: web::Json<BlindParams>,
     data: web::Data<Mutex<ShiroWallet>>,
@@ -57,17 +58,18 @@ pub async fn put(
     if data.lock().unwrap().wallet.is_some() {
         match actix_web::rt::task::spawn_blocking(move || {
             let params = BlindParamsForLib::from(params.clone());
-            data.lock().unwrap().wallet.as_mut().unwrap().blind(
+            data.lock().unwrap().wallet.as_mut().unwrap().blind_receive(
                 params.asset_id.clone(),
                 params.amount,
                 params.duration_seconds,
                 params.transport_endpoints,
+                params.min_confirmations,
             )
         })
         .await
         .unwrap()
         {
-            Ok(blind_data) => HttpResponse::Ok().json(BlindData::from(blind_data)),
+            Ok(receive_data) => HttpResponse::Ok().json(ReceiveData::from(receive_data)),
             Err(e) => HttpResponse::BadRequest().body(e.to_string()),
         }
     } else {
@@ -79,7 +81,7 @@ pub async fn put(
 mod tests {
     use super::*;
 
-    use crate::tests::PROXY_ENDPOINT;
+    use crate::tests::{MIN_CONFIRMATIONS, PROXY_ENDPOINT};
     use crate::wallet::{
         address::AddressResult,
         go_online::GoOnlineParams,
@@ -138,7 +140,7 @@ mod tests {
             assert!(resp.status().is_success());
         }
         {
-            let params = UtxosParams::new(true, Some(1), None, 1.0);
+            let params = UtxosParams::new(true, None, None, 1.0);
             let req = test::TestRequest::put()
                 .uri("/wallet/utxos")
                 .set_json(params)
@@ -165,13 +167,18 @@ mod tests {
             amount: Some("10".to_string()),
             duration_seconds: Some(10),
             transport_endpoints: vec![PROXY_ENDPOINT.clone()],
+            min_confirmations: MIN_CONFIRMATIONS,
         };
         let req = test::TestRequest::put()
-            .uri("/wallet/blind")
+            .uri("/wallet/blind_receive")
             .set_json(params)
             .to_request();
         let resp = test::call_service(&app, req).await;
         println!("{:?}", resp);
         assert!(resp.status().is_success());
+        let body: ReceiveData = test::read_body_json(resp).await;
+        assert!(body.invoice.starts_with("rgb:"));
+        assert!(body.recipient_id.starts_with("utxob:"));
+        assert!(body.expiration_timestamp.is_some());
     }
 }

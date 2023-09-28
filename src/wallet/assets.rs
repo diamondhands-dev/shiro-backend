@@ -1,13 +1,13 @@
 use crate::{wallet::Balance, ShiroWallet};
 use actix_web::{put, web, HttpResponse, Responder};
-use rgb_lib::wallet::AssetIface;
+use rgb_lib::AssetSchema;
 use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Mutex;
 
 #[derive(Deserialize, Serialize)]
 pub struct AssetsParams {
-    filter_asset_types: Vec<AssetIface>,
+    filter_asset_types: Vec<AssetSchema>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -34,8 +34,8 @@ pub struct AssetRgb20 {
     balance: Balance,
 }
 
-impl From<rgb_lib::wallet::AssetRgb20> for AssetRgb20 {
-    fn from(origin: rgb_lib::wallet::AssetRgb20) -> AssetRgb20 {
+impl From<rgb_lib::wallet::AssetNIA> for AssetRgb20 {
+    fn from(origin: rgb_lib::wallet::AssetNIA) -> AssetRgb20 {
         AssetRgb20 {
             asset_id: origin.asset_id,
             ticker: origin.ticker,
@@ -56,8 +56,8 @@ pub struct AssetRgb25 {
     data_paths: Vec<Media>,
 }
 
-impl From<rgb_lib::wallet::AssetRgb25> for AssetRgb25 {
-    fn from(origin: rgb_lib::wallet::AssetRgb25) -> AssetRgb25 {
+impl From<rgb_lib::wallet::AssetCFA> for AssetRgb25 {
+    fn from(origin: rgb_lib::wallet::AssetCFA) -> AssetRgb25 {
         AssetRgb25 {
             asset_id: origin.asset_id,
             name: origin.name,
@@ -82,12 +82,12 @@ pub struct Assets {
 impl From<rgb_lib::wallet::Assets> for Assets {
     fn from(x: rgb_lib::wallet::Assets) -> Assets {
         Assets {
-            rgb20: x.rgb20.map(|vec| {
+            rgb20: x.nia.map(|vec| {
                 vec.into_iter()
                     .map(AssetRgb20::from)
                     .collect::<Vec<AssetRgb20>>()
             }),
-            rgb25: x.rgb25.map(|vec| {
+            rgb25: x.cfa.map(|vec| {
                 vec.into_iter()
                     .map(AssetRgb25::from)
                     .collect::<Vec<AssetRgb25>>()
